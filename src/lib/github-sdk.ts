@@ -1,5 +1,4 @@
-
-import { Configuration, OpenAIApi } from "openai";
+import OpenAI from "openai";
 import { config } from "./config";
 
 interface QueryBuilder {
@@ -143,7 +142,6 @@ class GitHubDatabase {
     }
   }
 
-  // Generic CRUD methods
   async get(tableName: string): Promise<any[]> {
     try {
       const data = await this.getData();
@@ -266,7 +264,6 @@ class GitHubDatabase {
     };
   }
 
-  // Authentication methods
   async login(email: string, password: string): Promise<string> {
     try {
       const data = await this.getData();
@@ -345,7 +342,6 @@ class GitHubDatabase {
     this.sessionStore.delete(token);
   }
 
-  // Legacy methods for backwards compatibility
   async createUser(userData: any): Promise<any> {
     return this.insert('users', userData);
   }
