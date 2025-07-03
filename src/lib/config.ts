@@ -1,50 +1,39 @@
 
-// Environment configuration
 export const config = {
   github: {
-    owner: import.meta.env.VITE_GITHUB_OWNER || 'your-github-username',
-    repo: import.meta.env.VITE_GITHUB_REPO || 'prolearning-db',
-    token: import.meta.env.VITE_GITHUB_TOKEN || 'your-github-token',
+    owner: import.meta.env.VITE_GITHUB_OWNER,
+    repo: import.meta.env.VITE_GITHUB_REPO,
+    token: import.meta.env.VITE_GITHUB_TOKEN,
+  },
+  openai: {
+    apiKey: import.meta.env.VITE_OPENAI_API_KEY,
   },
   ai: {
-    chutesToken: import.meta.env.VITE_CHUTES_API_TOKEN || '',
-    geminiKey: import.meta.env.VITE_GOOGLE_AI_API_KEY || '',
-    cloudflareAccountId: import.meta.env.VITE_CLOUDFLARE_ACCOUNT_ID || '',
-    cloudflareToken: import.meta.env.VITE_CLOUDFLARE_API_TOKEN || '',
+    chutesToken: import.meta.env.VITE_CHUTES_TOKEN,
+    geminiKey: import.meta.env.VITE_GEMINI_API_KEY,
+    cloudflareAccountId: import.meta.env.VITE_CLOUDFLARE_ACCOUNT_ID,
+    cloudflareToken: import.meta.env.VITE_CLOUDFLARE_API_TOKEN,
   },
   payment: {
-    paystackPublicKey: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || '',
-    paystackSecretKey: import.meta.env.VITE_PAYSTACK_SECRET_KEY || '',
+    paystackPublicKey: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
+    paystackSecretKey: import.meta.env.VITE_PAYSTACK_SECRET_KEY,
   },
   app: {
+    name: 'ProLearning',
     url: import.meta.env.VITE_APP_URL || 'http://localhost:5173',
-    apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5173/api',
-  },
+    version: '1.0.0'
+  }
 };
 
 export const CURRENCY_RATES: Record<string, number> = {
-  'USD': 1.0,
-  'NGN': 1600,
+  'USD': 1,
+  'NGN': 1650,
   'GBP': 0.79,
-  'EUR': 0.92,
-  'CAD': 1.36,
-  'AUD': 1.52,
+  'EUR': 0.85,
+  'CAD': 1.25,
+  'AUD': 1.35,
   'INR': 83,
-  'ZAR': 18.5,
-  'KES': 129,
-  'GHS': 15.8,
-};
-
-export const COUNTRY_CURRENCY_MAP: Record<string, string> = {
-  'Nigeria': 'NGN',
-  'United States': 'USD',
-  'United Kingdom': 'GBP',
-  'Canada': 'CAD',
-  'Australia': 'AUD',
-  'Germany': 'EUR',
-  'France': 'EUR',
-  'India': 'INR',
-  'South Africa': 'ZAR',
-  'Kenya': 'KES',
-  'Ghana': 'GHS',
+  'ZAR': 18,
+  'KES': 130,
+  'GHS': 12
 };
