@@ -1,4 +1,3 @@
-
 import { config } from './config';
 
 export interface AIProvider {
@@ -6,6 +5,27 @@ export interface AIProvider {
   generateCourse: (prompt: string) => Promise<any>;
   generateContent: (prompt: string, type: 'lesson' | 'quiz' | 'flashcard' | 'mindmap' | 'keypoints') => Promise<any>;
   isAvailable: () => boolean;
+}
+
+export interface CourseGenerationOptions {
+  academicLevel: string;
+  subject: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  duration: number;
+  includeQuiz: boolean;
+  quizOptions?: {
+    count: number;
+    types: string[];
+  };
+  includeFlashcards: boolean;
+  flashcardCount?: number;
+  includeMindmap: boolean;
+  includeKeypoints: boolean;
+  learningStyle: string;
+  tone: string;
+  topicBased: boolean;
+  specificTopic?: string;
+  additionalInstructions?: string;
 }
 
 class ChutesAIProvider implements AIProvider {

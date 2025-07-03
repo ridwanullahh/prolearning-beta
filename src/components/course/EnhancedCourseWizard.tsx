@@ -424,7 +424,7 @@ const EnhancedCourseWizard = ({ onCourseGenerated, onCancel }: { onCourseGenerat
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3 }}
           >
-            {steps[currentStep].component({
+            {React.createElement(steps[currentStep].component, {
               courseSpec,
               setCourseSpec,
               academicLevels,
@@ -467,7 +467,7 @@ const AcademicLevelStep = ({ courseSpec, setCourseSpec, academicLevels, onNext }
         <div>
           <Label className="text-base font-medium mb-3 block">Education Category</Label>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-            {categories.map((category) => (
+            {categories.map((category: string) => (
               <Button
                 key={category}
                 variant={selectedCategory === category ? "default" : "outline"}
