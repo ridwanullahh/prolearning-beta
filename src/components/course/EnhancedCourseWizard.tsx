@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -641,7 +640,7 @@ const CourseTypeStep = ({ courseSpec, setCourseSpec, onNext, onPrev }: any) => {
             <ChevronLeft className="mr-2 h-4 w-4" /> Previous
           </Button>
           <Button 
-            onClick={onNext}
+            onClick={onNext} 
             disabled={courseSpec.courseType === 'topic_based' && !courseSpec.topic}
             className="px-8"
           >
