@@ -1,143 +1,124 @@
 
-// AI Service for ProLearning Platform
-// Supports Chutes AI, Gemini 2.5 Flash, and Cloudflare Worker AI
+import { config } from './config';
 
-interface AIProvider {
+export interface AIProvider {
   name: string;
-  generateResponse: (prompt: string, options?: any) => Promise<string>;
-  isAvailable: () => Promise<boolean>;
-}
-
-interface CourseGenerationOptions {
-  academicLevel: string;
-  subject: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  duration: number;
-  includeQuiz: boolean;
-  quizOptions?: {
-    count: number;
-    types: string[];
-  };
-  includeFlashcards: boolean;
-  flashcardCount?: number;
-  includeMindmap: boolean;
-  includeKeypoints: boolean;
-  learningStyle?: string;
-  tone?: string;
-  topicBased?: boolean;
-  specificTopic?: string;
-  additionalInstructions?: string;
-}
-
-interface GeneratedCourse {
-  title: string;
-  description: string;
-  curriculum: any[];
-  lessons: any[];
-  quiz?: any;
-  flashcards?: any[];
-  mindmap?: any;
-  keypoints?: any[];
+  generateCourse: (prompt: string) => Promise<any>;
+  generateContent: (prompt: string, type: 'lesson' | 'quiz' | 'flashcard' | 'mindmap' | 'keypoints') => Promise<any>;
+  isAvailable: () => boolean;
 }
 
 class ChutesAIProvider implements AIProvider {
   name = 'Chutes AI';
-  private apiKey: string;
-  private baseUrl = 'https://llm.chutes.ai/v1/chat/completions';
 
-  constructor(apiKey: string) {
-    this.apiKey = apiKey;
-  }
-
-  async generateResponse(prompt: string, options: any = {}): Promise<string> {
-    const response = await fetch(this.baseUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'deepseek-ai/DeepSeek-V3-0324',
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        stream: false,
-        max_tokens: options.maxTokens || 4000,
-        temperature: options.temperature || 0.7,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Chutes AI API error: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data.choices[0].message.content;
-  }
-
-  async isAvailable(): Promise<boolean> {
+  async generateCourse(prompt: string): Promise<any> {
     try {
-      const response = await fetch(this.baseUrl, {
+      const response = await fetch('https://llm.chutes.ai/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          'Authorization': `Bearer ${config.ai.chutesToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           model: 'deepseek-ai/DeepSeek-V3-0324',
-          messages: [{ role: 'user', content: 'test' }],
-          max_tokens: 1,
-        }),
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert educational content creator. Generate comprehensive course content in JSON format with lessons, quizzes, flashcards, mind maps, and key points. Ensure content is educationally sound and age-appropriate.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          stream: false,
+          max_tokens: 4000,
+          temperature: 0.7
+        })
       });
-      return response.ok;
+
+      if (!response.ok) {
+        throw new Error(`Chutes AI API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return this.parseCourseResponse(data.choices[0].message.content);
+    } catch (error) {
+      console.error('Chutes AI error:', error);
+      throw error;
+    }
+  }
+
+  async generateContent(prompt: string, type: string): Promise<any> {
+    try {
+      const response = await fetch('https://llm.chutes.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${config.ai.chutesToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'deepseek-ai/DeepSeek-V3-0324',
+          messages: [
+            {
+              role: 'system',
+              content: `You are an expert at creating ${type} content for educational purposes. Return content in JSON format suitable for the ${type} type.`
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          stream: false,
+          max_tokens: 2000,
+          temperature: 0.7
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Chutes AI API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return JSON.parse(data.choices[0].message.content);
+    } catch (error) {
+      console.error('Chutes AI content generation error:', error);
+      throw error;
+    }
+  }
+
+  isAvailable(): boolean {
+    return !!config.ai.chutesToken;
+  }
+
+  private parseCourseResponse(content: string): any {
+    try {
+      return JSON.parse(content);
     } catch {
-      return false;
+      // Fallback parsing if JSON is malformed
+      return {
+        title: 'Generated Course',
+        description: content.substring(0, 200),
+        lessons: [
+          {
+            title: 'Introduction',
+            content: content,
+            order: 1,
+            duration: 30,
+            type: 'text'
+          }
+        ]
+      };
     }
   }
 }
 
-class GeminiProvider implements AIProvider {
-  name = 'Gemini 2.5 Flash';
-  private apiKey: string;
-  private baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
+class GeminiAIProvider implements AIProvider {
+  name = 'Gemini AI';
 
-  constructor(apiKey: string) {
-    this.apiKey = apiKey;
-  }
-
-  async generateResponse(prompt: string, options: any = {}): Promise<string> {
-    const response = await fetch(`${this.baseUrl}?key=${this.apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }],
-        generationConfig: {
-          temperature: options.temperature || 0.7,
-          maxOutputTokens: options.maxTokens || 4000,
-        }
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data.candidates[0].content.parts[0].text;
-  }
-
-  async isAvailable(): Promise<boolean> {
+  async generateCourse(prompt: string): Promise<any> {
     try {
-      const response = await fetch(`${this.baseUrl}?key=${this.apiKey}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${config.ai.geminiKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -145,427 +126,452 @@ class GeminiProvider implements AIProvider {
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: 'test'
+              text: `Generate a comprehensive educational course in JSON format. ${prompt}`
             }]
           }],
           generationConfig: {
-            maxOutputTokens: 1,
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 4000,
           }
-        }),
+        })
       });
-      return response.ok;
+
+      if (!response.ok) {
+        throw new Error(`Gemini AI API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const content = data.candidates[0].content.parts[0].text;
+      return this.parseCourseResponse(content);
+    } catch (error) {
+      console.error('Gemini AI error:', error);
+      throw error;
+    }
+  }
+
+  async generateContent(prompt: string, type: string): Promise<any> {
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${config.ai.geminiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `Generate ${type} content in JSON format: ${prompt}`
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 2000,
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Gemini AI API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const content = data.candidates[0].content.parts[0].text;
+      return JSON.parse(content);
+    } catch (error) {
+      console.error('Gemini AI content generation error:', error);
+      throw error;
+    }
+  }
+
+  isAvailable(): boolean {
+    return !!config.ai.geminiKey;
+  }
+
+  private parseCourseResponse(content: string): any {
+    try {
+      // Extract JSON from markdown code blocks if present
+      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[1]);
+      }
+      return JSON.parse(content);
     } catch {
-      return false;
+      return {
+        title: 'Generated Course',
+        description: content.substring(0, 200),
+        lessons: [
+          {
+            title: 'Introduction',
+            content: content,
+            order: 1,
+            duration: 30,
+            type: 'text'
+          }
+        ]
+      };
     }
   }
 }
 
-class CloudflareWorkerAIProvider implements AIProvider {
-  name = 'Cloudflare Worker AI';
-  private apiKey: string;
-  private accountId: string;
-  private baseUrl: string;
+class CloudflareAIProvider implements AIProvider {
+  name = 'Cloudflare AI';
 
-  constructor(apiKey: string, accountId: string) {
-    this.apiKey = apiKey;
-    this.accountId = accountId;
-    this.baseUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/meta/llama-2-7b-chat-fp16`;
-  }
-
-  async generateResponse(prompt: string, options: any = {}): Promise<string> {
-    const response = await fetch(this.baseUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        max_tokens: options.maxTokens || 4000,
-        temperature: options.temperature || 0.7,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Cloudflare Worker AI error: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data.result.response;
-  }
-
-  async isAvailable(): Promise<boolean> {
+  async generateCourse(prompt: string): Promise<any> {
     try {
-      const response = await fetch(this.baseUrl, {
+      const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${config.ai.cloudflareAccountId}/ai/run/@cf/meta/llama-3.1-8b-instruct`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          'Authorization': `Bearer ${config.ai.cloudflareToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          messages: [{ role: 'user', content: 'test' }],
-          max_tokens: 1,
-        }),
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert educational content creator. Generate comprehensive course content in JSON format.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 4000
+        })
       });
-      return response.ok;
+
+      if (!response.ok) {
+        throw new Error(`Cloudflare AI API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return this.parseCourseResponse(data.result.response);
+    } catch (error) {
+      console.error('Cloudflare AI error:', error);
+      throw error;
+    }
+  }
+
+  async generateContent(prompt: string, type: string): Promise<any> {
+    try {
+      const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${config.ai.cloudflareAccountId}/ai/run/@cf/meta/llama-3.1-8b-instruct`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${config.ai.cloudflareToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: [
+            {
+              role: 'system',
+              content: `Generate ${type} content in JSON format.`
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 2000
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Cloudflare AI API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return JSON.parse(data.result.response);
+    } catch (error) {
+      console.error('Cloudflare AI content generation error:', error);
+      throw error;
+    }
+  }
+
+  isAvailable(): boolean {
+    return !!(config.ai.cloudflareAccountId && config.ai.cloudflareToken);
+  }
+
+  private parseCourseResponse(content: string): any {
+    try {
+      return JSON.parse(content);
     } catch {
-      return false;
+      return {
+        title: 'Generated Course',
+        description: content.substring(0, 200),
+        lessons: [
+          {
+            title: 'Introduction',
+            content: content,
+            order: 1,
+            duration: 30,
+            type: 'text'
+          }
+        ]
+      };
     }
   }
 }
 
 class AIService {
-  private providers: AIProvider[] = [];
-  private currentProvider: AIProvider | null = null;
+  private providers: AIProvider[];
+  private currentProviderIndex = 0;
 
   constructor() {
-    this.initializeProviders();
+    this.providers = [
+      new ChutesAIProvider(),
+      new GeminiAIProvider(),
+      new CloudflareAIProvider()
+    ];
   }
 
-  private initializeProviders() {
-    // Initialize providers based on available API keys
-    const chutesApiKey = process.env.CHUTES_API_KEY;
-    const geminiApiKey = process.env.GEMINI_API_KEY;
-    const cloudflareApiKey = process.env.CLOUDFLARE_API_KEY;
-    const cloudflareAccountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-
-    if (chutesApiKey) {
-      this.providers.push(new ChutesAIProvider(chutesApiKey));
-    }
-
-    if (geminiApiKey) {
-      this.providers.push(new GeminiProvider(geminiApiKey));
-    }
-
-    if (cloudflareApiKey && cloudflareAccountId) {
-      this.providers.push(new CloudflareWorkerAIProvider(cloudflareApiKey, cloudflareAccountId));
-    }
-
-    // Fallback to demo mode if no API keys are provided
-    if (this.providers.length === 0) {
-      console.warn('No AI providers configured. Using demo mode.');
-    }
+  private getAvailableProviders(): AIProvider[] {
+    return this.providers.filter(provider => provider.isAvailable());
   }
 
-  private async getAvailableProvider(): Promise<AIProvider | null> {
-    if (this.currentProvider && await this.currentProvider.isAvailable()) {
-      return this.currentProvider;
+  private async tryWithFallback<T>(operation: (provider: AIProvider) => Promise<T>): Promise<T> {
+    const availableProviders = this.getAvailableProviders();
+    
+    if (availableProviders.length === 0) {
+      throw new Error('No AI providers available. Please configure API keys.');
     }
 
-    for (const provider of this.providers) {
-      if (await provider.isAvailable()) {
-        this.currentProvider = provider;
-        return provider;
+    let lastError: Error | null = null;
+
+    for (let i = 0; i < availableProviders.length; i++) {
+      const provider = availableProviders[i];
+      try {
+        console.log(`Trying AI provider: ${provider.name}`);
+        const result = await operation(provider);
+        console.log(`Successfully used provider: ${provider.name}`);
+        return result;
+      } catch (error) {
+        console.warn(`Provider ${provider.name} failed:`, error);
+        lastError = error as Error;
+        
+        // Wait before trying next provider
+        if (i < availableProviders.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
     }
 
-    return null;
+    throw new Error(`All AI providers failed. Last error: ${lastError?.message}`);
   }
 
-  async generateCourse(options: CourseGenerationOptions): Promise<GeneratedCourse> {
-    const provider = await this.getAvailableProvider();
+  async generateCourse(courseSpec: any): Promise<any> {
+    const prompt = this.buildCoursePrompt(courseSpec);
     
-    if (!provider) {
-      // Fallback to demo content
-      return this.generateDemoCourse(options);
-    }
-
-    const prompt = this.buildCoursePrompt(options);
-    
-    try {
-      const response = await provider.generateResponse(prompt, { maxTokens: 6000 });
-      return this.parseCourseResponse(response, options);
-    } catch (error) {
-      console.error(`Error with ${provider.name}:`, error);
-      // Try next provider or fallback to demo
-      return this.generateDemoCourse(options);
-    }
+    return this.tryWithFallback(async (provider) => {
+      const result = await provider.generateCourse(prompt);
+      return this.validateAndFormatCourse(result, courseSpec);
+    });
   }
 
-  private buildCoursePrompt(options: CourseGenerationOptions): string {
+  async generateLesson(lessonSpec: any): Promise<any> {
+    const prompt = this.buildLessonPrompt(lessonSpec);
+    
+    return this.tryWithFallback(async (provider) => {
+      return await provider.generateContent(prompt, 'lesson');
+    });
+  }
+
+  async generateQuiz(quizSpec: any): Promise<any> {
+    const prompt = this.buildQuizPrompt(quizSpec);
+    
+    return this.tryWithFallback(async (provider) => {
+      return await provider.generateContent(prompt, 'quiz');
+    });
+  }
+
+  async generateFlashcards(flashcardSpec: any): Promise<any> {
+    const prompt = this.buildFlashcardPrompt(flashcardSpec);
+    
+    return this.tryWithFallback(async (provider) => {
+      return await provider.generateContent(prompt, 'flashcard');
+    });
+  }
+
+  async generateMindMap(mindMapSpec: any): Promise<any> {
+    const prompt = this.buildMindMapPrompt(mindMapSpec);
+    
+    return this.tryWithFallback(async (provider) => {
+      return await provider.generateContent(prompt, 'mindmap');
+    });
+  }
+
+  async generateKeyPoints(keyPointsSpec: any): Promise<any> {
+    const prompt = this.buildKeyPointsPrompt(keyPointsSpec);
+    
+    return this.tryWithFallback(async (provider) => {
+      return await provider.generateContent(prompt, 'keypoints');
+    });
+  }
+
+  private buildCoursePrompt(spec: any): string {
     const {
       academicLevel,
       subject,
+      courseType,
+      topic,
       difficulty,
       duration,
-      includeQuiz,
-      quizOptions,
-      includeFlashcards,
-      flashcardCount,
-      includeMindmap,
-      includeKeypoints,
       learningStyle,
       tone,
-      topicBased,
-      specificTopic,
-      additionalInstructions
-    } = options;
+      quizOptions,
+      flashcardOptions,
+      additionalComments
+    } = spec;
 
     let prompt = `Create a comprehensive educational course with the following specifications:
 
 Academic Level: ${academicLevel}
 Subject: ${subject}
-${topicBased && specificTopic ? `Specific Topic: ${specificTopic}` : 'Full Subject Curriculum'}
+Course Type: ${courseType}
+${topic ? `Specific Topic: ${topic}` : ''}
 Difficulty: ${difficulty}
-Duration: ${duration} hours
-Learning Style: ${learningStyle || 'Mixed'}
-Tone: ${tone || 'Professional'}
+Duration: ${duration} minutes
+Learning Style: ${learningStyle}
+Tone: ${tone}
 
 Course Requirements:
-1. Course Title and Description
-2. Structured Curriculum with learning objectives
-3. ${Math.ceil(duration / 2)} detailed lessons (each lesson should be ${duration / Math.ceil(duration / 2)} hours)
+- Generate progressive lessons with clear learning objectives
+- Include ${quizOptions?.count || 5} quiz questions per lesson (Types: ${quizOptions?.types?.join(', ') || 'Multiple Choice'})
+- Create ${flashcardOptions?.count || 10} flashcards per lesson
+- Generate mind maps for complex concepts
+- Extract key points for each lesson
 
-Each lesson should include:
-- Clear learning objectives
-- Detailed content explanation
-- Practical examples
-- Summary of key concepts
+Content Guidelines:
+- Ensure content is age-appropriate and educationally sound
+- Use clear, engaging language suitable for the academic level
+- Include practical examples and real-world applications
+- Maintain Islamic values and avoid prohibited content
+- Structure content progressively from basic to advanced concepts
 
-${includeQuiz ? `
-4. Quiz with ${quizOptions?.count || 5} questions
-   Question types: ${quizOptions?.types?.join(', ') || 'Multiple Choice, True/False'}
-` : ''}
+${additionalComments ? `Additional Requirements: ${additionalComments}` : ''}
 
-${includeFlashcards ? `
-5. ${flashcardCount || 10} Flashcards for key concepts
-` : ''}
-
-${includeMindmap ? `
-6. Mind Map structure showing relationships between concepts
-` : ''}
-
-${includeKeypoints ? `
-7. Key Points summary for each lesson
-` : ''}
-
-${additionalInstructions ? `
-Additional Instructions: ${additionalInstructions}
-` : ''}
-
-Please provide the response in a structured JSON format that can be easily parsed.
-Ensure all content is educational, accurate, and appropriate for the specified academic level.
-Keep content secular and inclusive while maintaining educational excellence.`;
+Return the course data in this JSON format:
+{
+  "title": "Course Title",
+  "description": "Course description",
+  "objectives": ["Learning objective 1", "Learning objective 2"],
+  "lessons": [
+    {
+      "title": "Lesson Title",
+      "description": "Lesson description",
+      "content": "Detailed lesson content",
+      "duration": 30,
+      "order": 1,
+      "objectives": ["Lesson objective 1"],
+      "quiz": {
+        "questions": [
+          {
+            "question": "Question text",
+            "type": "multiple_choice",
+            "options": ["A", "B", "C", "D"],
+            "correct_answer": "A",
+            "explanation": "Why this is correct"
+          }
+        ]
+      },
+      "flashcards": [
+        {
+          "front": "Question/Term",
+          "back": "Answer/Definition",
+          "difficulty": "easy"
+        }
+      ],
+      "keyPoints": [
+        {
+          "point": "Key concept",
+          "explanation": "Detailed explanation",
+          "importance": "high"
+        }
+      ],
+      "mindMap": {
+        "title": "Concept Map",
+        "nodes": [
+          {
+            "id": "1",
+            "label": "Main Concept",
+            "children": ["2", "3"]
+          }
+        ]
+      }
+    }
+  ]
+}`;
 
     return prompt;
   }
 
-  private parseCourseResponse(response: string, options: CourseGenerationOptions): GeneratedCourse {
-    try {
-      // Try to parse as JSON first
-      const parsed = JSON.parse(response);
-      return parsed;
-    } catch {
-      // If not JSON, parse the text response
-      return this.parseTextResponse(response, options);
-    }
+  private buildLessonPrompt(spec: any): string {
+    return `Create a detailed lesson on "${spec.topic}" for ${spec.academicLevel} level students in ${spec.subject}. 
+    Duration: ${spec.duration} minutes. Learning style: ${spec.learningStyle}. 
+    Include clear explanations, examples, and practical applications.`;
   }
 
-  private parseTextResponse(response: string, options: CourseGenerationOptions): GeneratedCourse {
-    // Basic text parsing logic
-    const lines = response.split('\n').filter(line => line.trim());
-    
-    return {
-      title: `${options.subject} - ${options.academicLevel}`,
-      description: `A comprehensive ${options.difficulty} level course in ${options.subject}`,
-      curriculum: [
-        {
-          module: 1,
-          title: 'Introduction and Fundamentals',
-          objectives: ['Understand basic concepts', 'Learn terminology', 'Apply knowledge']
-        }
-      ],
-      lessons: [
-        {
-          id: 1,
-          title: 'Introduction to ' + options.subject,
-          content: response.substring(0, Math.min(response.length, 1000)),
-          duration: options.duration / 2,
-          objectives: ['Learn fundamentals', 'Practice concepts']
-        }
-      ],
-      ...(options.includeQuiz && {
-        quiz: {
-          questions: [
-            {
-              question: `What is the main focus of ${options.subject}?`,
-              options: ['Option A', 'Option B', 'Option C', 'Option D'],
-              correct: 0
-            }
-          ]
-        }
-      }),
-      ...(options.includeFlashcards && {
-        flashcards: [
-          {
-            front: options.subject,
-            back: 'Key subject area of study'
-          }
-        ]
-      }),
-      ...(options.includeMindmap && {
-        mindmap: {
-          central: options.subject,
-          branches: ['Concepts', 'Applications', 'Theory', 'Practice']
-        }
-      }),
-      ...(options.includeKeypoints && {
-        keypoints: [
-          {
-            point: `${options.subject} is fundamental to understanding the academic area`,
-            importance: 'high'
-          }
-        ]
-      })
+  private buildQuizPrompt(spec: any): string {
+    return `Create ${spec.count} quiz questions about "${spec.topic}" for ${spec.academicLevel} level.
+    Question types: ${spec.types.join(', ')}. Difficulty: ${spec.difficulty}.
+    Include correct answers and explanations.`;
+  }
+
+  private buildFlashcardPrompt(spec: any): string {
+    return `Create ${spec.count} flashcards for "${spec.topic}" at ${spec.academicLevel} level.
+    Focus on key terms, concepts, and definitions. Vary difficulty levels.`;
+  }
+
+  private buildMindMapPrompt(spec: any): string {
+    return `Create a mind map structure for "${spec.topic}" showing relationships between concepts.
+    Include main nodes, sub-nodes, and connections. Format as JSON with nodes and relationships.`;
+  }
+
+  private buildKeyPointsPrompt(spec: any): string {
+    return `Extract the most important key points from "${spec.topic}" for ${spec.academicLevel} level.
+    Prioritize by importance and include brief explanations.`;
+  }
+
+  private validateAndFormatCourse(result: any, spec: any): any {
+    // Ensure the result has required structure
+    const course = {
+      title: result.title || `${spec.subject} Course`,
+      description: result.description || `A comprehensive course on ${spec.subject}`,
+      academicLevelId: spec.academicLevelId,
+      subjectId: spec.subjectId,
+      difficulty: spec.difficulty,
+      duration: spec.duration,
+      isAiGenerated: true,
+      courseType: spec.courseType,
+      objectives: result.objectives || [],
+      lessons: result.lessons || [],
+      creatorType: 'ai',
+      isPublished: false,
+      status: 'draft'
     };
+
+    // Validate lessons structure
+    course.lessons = course.lessons.map((lesson: any, index: number) => ({
+      ...lesson,
+      order: lesson.order || index + 1,
+      duration: lesson.duration || 30,
+      type: lesson.type || 'text',
+      isRequired: true
+    }));
+
+    return course;
   }
 
-  private generateDemoCourse(options: CourseGenerationOptions): GeneratedCourse {
-    return {
-      title: `${options.subject} for ${options.academicLevel}`,
-      description: `A comprehensive ${options.difficulty} level course in ${options.subject} designed for ${options.academicLevel} students.`,
-      curriculum: [
-        {
-          module: 1,
-          title: 'Fundamentals',
-          objectives: [
-            'Understand core concepts',
-            'Learn key terminology',
-            'Apply basic principles'
-          ]
-        },
-        {
-          module: 2,
-          title: 'Advanced Topics',
-          objectives: [
-            'Explore complex concepts',
-            'Analyze real-world applications',
-            'Develop critical thinking'
-          ]
-        }
-      ],
-      lessons: [
-        {
-          id: 1,
-          title: `Introduction to ${options.subject}`,
-          content: `Welcome to this comprehensive course on ${options.subject}. This lesson will introduce you to the fundamental concepts and provide a solid foundation for your learning journey.`,
-          duration: Math.ceil(options.duration / 2),
-          objectives: [
-            'Understand the scope of the subject',
-            'Learn basic terminology',
-            'Identify key concepts'
-          ]
-        },
-        {
-          id: 2,
-          title: `Advanced ${options.subject} Concepts`,
-          content: `Building on the foundation from the previous lesson, we will now explore more advanced topics and their practical applications.`,
-          duration: Math.floor(options.duration / 2),
-          objectives: [
-            'Apply advanced concepts',
-            'Analyze complex scenarios',
-            'Synthesize knowledge'
-          ]
-        }
-      ],
-      ...(options.includeQuiz && {
-        quiz: {
-          title: `${options.subject} Assessment`,
-          questions: [
-            {
-              id: 1,
-              question: `What is the primary focus of ${options.subject}?`,
-              type: 'multiple-choice',
-              options: [
-                'Understanding core principles',
-                'Memorizing facts',
-                'Learning procedures',
-                'Following instructions'
-              ],
-              correct: 0,
-              explanation: 'The primary focus is understanding core principles that can be applied across various contexts.'
-            },
-            {
-              id: 2,
-              question: `True or False: ${options.subject} requires practical application of concepts.`,
-              type: 'true-false',
-              correct: true,
-              explanation: 'Practical application helps reinforce theoretical understanding.'
-            }
-          ]
-        }
-      }),
-      ...(options.includeFlashcards && {
-        flashcards: Array.from({ length: options.flashcardCount || 5 }, (_, i) => ({
-          id: i + 1,
-          front: `Key Concept ${i + 1}`,
-          back: `Important principle or definition related to ${options.subject}`,
-          difficulty: 'medium'
-        }))
-      }),
-      ...(options.includeMindmap && {
-        mindmap: {
-          central: options.subject,
-          branches: [
-            {
-              name: 'Fundamentals',
-              children: ['Basic Concepts', 'Terminology', 'Principles']
-            },
-            {
-              name: 'Applications',
-              children: ['Real-world Use', 'Case Studies', 'Examples']
-            },
-            {
-              name: 'Advanced Topics',
-              children: ['Complex Theories', 'Research', 'Innovation']
-            }
-          ]
-        }
-      }),
-      ...(options.includeKeypoints && {
-        keypoints: [
-          {
-            id: 1,
-            point: `${options.subject} builds foundational understanding`,
-            explanation: 'Starting with basics ensures solid comprehension',
-            importance: 'high'
-          },
-          {
-            id: 2,
-            point: 'Practice reinforces learning',
-            explanation: 'Regular application of concepts improves retention',
-            importance: 'high'
-          },
-          {
-            id: 3,
-            point: 'Critical thinking is essential',
-            explanation: 'Analyzing and evaluating information develops expertise',
-            importance: 'medium'
-          }
-        ]
-      })
-    };
+  getAvailableProviderNames(): string[] {
+    return this.getAvailableProviders().map(p => p.name);
   }
 
-  async testConnection(): Promise<{ provider: string; status: boolean }[]> {
-    const results = [];
-    
-    for (const provider of this.providers) {
-      const status = await provider.isAvailable();
-      results.push({
-        provider: provider.name,
-        status
-      });
-    }
-    
-    return results;
+  getProviderStatus(): Record<string, boolean> {
+    return this.providers.reduce((status, provider) => {
+      status[provider.name] = provider.isAvailable();
+      return status;
+    }, {} as Record<string, boolean>);
   }
 }
 
 export const aiService = new AIService();
-export type { CourseGenerationOptions, GeneratedCourse };
+export default aiService;
