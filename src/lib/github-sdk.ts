@@ -1,4 +1,4 @@
-
+import OpenAI from 'openai';
 import UniversalSDK, { 
   UniversalSDKConfig, 
   User as SDKUser, 
@@ -451,9 +451,18 @@ class GitHubDatabase {
   private sdk: UniversalSDK;
   private isInitialized = false;
   private initPromise: Promise<void> | null = null;
+  private openai: OpenAI | null = null;
 
   constructor() {
     this.sdk = new UniversalSDK(SDK_CONFIG);
+    
+    // Initialize OpenAI if API key is available
+    if (config.ai.openai) {
+      this.openai = new OpenAI({
+        apiKey: config.ai.openai,
+        dangerouslyAllowBrowser: true
+      });
+    }
   }
 
   async initialize(): Promise<void> {

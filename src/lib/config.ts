@@ -1,4 +1,3 @@
-
 // Environment configuration
 export const config = {
   github: {
@@ -11,6 +10,7 @@ export const config = {
     geminiKey: import.meta.env.VITE_GOOGLE_AI_API_KEY || '',
     cloudflareAccountId: import.meta.env.VITE_CLOUDFLARE_ACCOUNT_ID || '',
     cloudflareToken: import.meta.env.VITE_CLOUDFLARE_API_TOKEN || '',
+    openai: import.meta.env.VITE_OPENAI_API_KEY || '',
   },
   payment: {
     paystackPublicKey: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || '',

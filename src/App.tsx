@@ -72,10 +72,10 @@ const App = () => {
               } 
             />
             <Route 
-              path="/my-course/:id/*" 
+              path="/my-course/:id" 
               element={
                 <ProtectedRoute allowedRoles={['learner']}>
-                  <CoursePage />
+                  <CourseViewer />
                 </ProtectedRoute>
               } 
             />
