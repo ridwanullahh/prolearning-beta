@@ -1,9 +1,8 @@
 
-import { db, User, UserProfile } from './database';
-import bcrypt from 'bcryptjs';
+import { db } from './github-sdk';
 
 export interface AuthUser {
-  id: number;
+  id: string;
   email: string;
   name: string;
   role: 'learner' | 'instructor' | 'super_admin';
@@ -14,37 +13,45 @@ export interface AuthUser {
 
 class AuthService {
   private currentUser: AuthUser | null = null;
+  private currentToken: string | null = null;
 
   async login(email: string, password: string): Promise<AuthUser> {
-    const user = await db.users.where('email').equals(email).first();
-    
-    if (!user) {
-      throw new Error('Invalid email or password');
+    try {
+      const token = await db.login(email, password);
+      
+      if (typeof token !== 'string') {
+        throw new Error('OTP not supported in this implementation');
+      }
+
+      const user = db.getCurrentUser(token);
+      if (!user) {
+        throw new Error('Failed to get user data');
+      }
+
+      if (!user.isActive) {
+        throw new Error('Account is deactivated');
+      }
+
+      this.currentUser = {
+        id: user.id!,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        avatar: user.avatar,
+        country: user.country,
+        currency: user.currency
+      };
+
+      this.currentToken = token;
+
+      // Store in localStorage for persistence
+      localStorage.setItem('auth_user', JSON.stringify(this.currentUser));
+      localStorage.setItem('auth_token', token);
+      
+      return this.currentUser;
+    } catch (error: any) {
+      throw new Error(error.message || 'Login failed');
     }
-
-    const isValid = await bcrypt.compare(password, user.passwordHash);
-    if (!isValid) {
-      throw new Error('Invalid email or password');
-    }
-
-    if (!user.isActive) {
-      throw new Error('Account is deactivated');
-    }
-
-    this.currentUser = {
-      id: user.id!,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      avatar: user.avatar,
-      country: user.country,
-      currency: user.currency
-    };
-
-    // Store in localStorage for persistence
-    localStorage.setItem('auth_user', JSON.stringify(this.currentUser));
-    
-    return this.currentUser;
   }
 
   async register(userData: {
@@ -54,81 +61,76 @@ class AuthService {
     role: 'learner' | 'instructor';
     country?: string;
   }): Promise<AuthUser> {
-    // Check if user already exists
-    const existingUser = await db.users.where('email').equals(userData.email).first();
-    if (existingUser) {
-      throw new Error('User already exists with this email');
+    try {
+      const currency = this.getCurrencyByCountry(userData.country);
+      
+      const user = await db.register(userData.email, userData.password, {
+        name: userData.name,
+        role: userData.role,
+        country: userData.country,
+        currency: currency,
+        isActive: true,
+        profileComplete: false
+      });
+
+      // Create user profile
+      await db.insert('userProfiles', {
+        userId: user.id,
+        preferences: JSON.stringify({
+          theme: 'light',
+          language: 'en',
+          notifications: true
+        })
+      });
+
+      // Create wallet
+      await db.insert('wallets', {
+        userId: user.id,
+        balance: 0,
+        currency: currency || 'USD'
+      });
+
+      // Initialize AI generation usage for current month
+      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+      await db.insert('aiGenerationUsage', {
+        userId: user.id,
+        month: currentMonth,
+        freeGenerationsUsed: 0,
+        paidGenerationsUsed: 0,
+        subscriptionActive: false
+      });
+
+      // Create session
+      const token = db.createSession(user);
+      this.currentToken = token;
+
+      this.currentUser = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        avatar: user.avatar,
+        country: user.country,
+        currency: user.currency
+      };
+
+      localStorage.setItem('auth_user', JSON.stringify(this.currentUser));
+      localStorage.setItem('auth_token', token);
+      
+      return this.currentUser;
+    } catch (error: any) {
+      throw new Error(error.message || 'Registration failed');
     }
-
-    // Hash password
-    const passwordHash = await bcrypt.hash(userData.password, 10);
-
-    // Create user
-    const userId = await db.users.add({
-      email: userData.email,
-      passwordHash,
-      name: userData.name,
-      role: userData.role,
-      country: userData.country,
-      currency: this.getCurrencyByCountry(userData.country),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      isActive: true,
-      profileComplete: false
-    });
-
-    // Create user profile
-    await db.userProfiles.add({
-      userId: userId as number,
-      preferences: JSON.stringify({
-        theme: 'light',
-        language: 'en',
-        notifications: true
-      })
-    });
-
-    // Create wallet
-    await db.wallets.add({
-      userId: userId as number,
-      balance: 0,
-      currency: this.getCurrencyByCountry(userData.country) || 'USD',
-      createdAt: new Date(),
-      updatedAt: new Date()
-    });
-
-    // Initialize AI generation usage for current month
-    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
-    await db.aiGenerationUsage.add({
-      userId: userId as number,
-      month: currentMonth,
-      freeGenerationsUsed: 0,
-      paidGenerationsUsed: 0,
-      subscriptionActive: false
-    });
-
-    const newUser = await db.users.get(userId as number);
-    if (!newUser) {
-      throw new Error('Failed to create user');
-    }
-
-    this.currentUser = {
-      id: newUser.id!,
-      email: newUser.email,
-      name: newUser.name,
-      role: newUser.role,
-      avatar: newUser.avatar,
-      country: newUser.country,
-      currency: newUser.currency
-    };
-
-    localStorage.setItem('auth_user', JSON.stringify(this.currentUser));
-    
-    return this.currentUser;
   }
 
   async logout(): Promise<void> {
+    if (this.currentToken) {
+      db.destroySession(this.currentToken);
+    }
     this.currentUser = null;
+    this.currentToken = null;
     localStorage.removeItem('auth_user');
+    localStorage.removeItem('auth_token');
   }
 
   getCurrentUser(): AuthUser | null {
@@ -138,12 +140,19 @@ class AuthService {
 
     // Try to restore from localStorage
     const stored = localStorage.getItem('auth_user');
-    if (stored) {
+    const token = localStorage.getItem('auth_token');
+    
+    if (stored && token) {
       try {
-        this.currentUser = JSON.parse(stored);
-        return this.currentUser;
+        const session = db.getSession(token);
+        if (session) {
+          this.currentUser = JSON.parse(stored);
+          this.currentToken = token;
+          return this.currentUser;
+        }
       } catch {
         localStorage.removeItem('auth_user');
+        localStorage.removeItem('auth_token');
       }
     }
 
@@ -157,6 +166,10 @@ class AuthService {
   hasRole(role: string): boolean {
     const user = this.getCurrentUser();
     return user?.role === role;
+  }
+
+  getCurrentToken(): string | null {
+    return this.currentToken || localStorage.getItem('auth_token');
   }
 
   private getCurrencyByCountry(country?: string): string {

@@ -1,12 +1,40 @@
 
-import { Routes, Route } from 'react-router-dom';
+import { useState } from 'react';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import { authService } from '@/lib/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Brain, Target, TrendingUp } from 'lucide-react';
+import { BookOpen, Brain, Target, TrendingUp, Plus } from 'lucide-react';
+import CourseGenerationWizard from '@/components/course/CourseGenerationWizard';
 
 const LearnerDashboard = () => {
+  const [showCourseGenerator, setShowCourseGenerator] = useState(false);
   const user = authService.getCurrentUser();
+  const navigate = useNavigate();
+
+  const handleCourseGenerated = (course: any) => {
+    setShowCourseGenerator(false);
+    // Refresh the dashboard or navigate to the new course
+    navigate(`/my-course/${course.id}`);
+  };
+
+  if (showCourseGenerator) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        <div className="container mx-auto py-8">
+          <div className="mb-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowCourseGenerator(false)}
+            >
+              ← Back to Dashboard
+            </Button>
+          </div>
+          <CourseGenerationWizard onCourseGenerated={handleCourseGenerated} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -25,8 +53,8 @@ const LearnerDashboard = () => {
               <BookOpen className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">3</div>
-              <p className="text-xs text-muted-foreground">+2 from last week</p>
+              <div className="text-2xl font-bold">0</div>
+              <p className="text-xs text-muted-foreground">Start learning today</p>
             </CardContent>
           </Card>
 
@@ -36,8 +64,8 @@ const LearnerDashboard = () => {
               <Target className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">24</div>
-              <p className="text-xs text-muted-foreground">+12 from last week</p>
+              <div className="text-2xl font-bold">0</div>
+              <p className="text-xs text-muted-foreground">Generate your first course</p>
             </CardContent>
           </Card>
 
@@ -47,8 +75,8 @@ const LearnerDashboard = () => {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">45.2</div>
-              <p className="text-xs text-muted-foreground">+8.1 from last week</p>
+              <div className="text-2xl font-bold">0</div>
+              <p className="text-xs text-muted-foreground">Track your progress</p>
             </CardContent>
           </Card>
 
@@ -58,8 +86,8 @@ const LearnerDashboard = () => {
               <Brain className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">2</div>
-              <p className="text-xs text-muted-foreground">Resets monthly</p>
+              <div className="text-2xl font-bold">3</div>
+              <p className="text-xs text-muted-foreground">Free monthly limit</p>
             </CardContent>
           </Card>
         </div>
@@ -68,25 +96,23 @@ const LearnerDashboard = () => {
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
-                <CardTitle>Recent Courses</CardTitle>
-                <CardDescription>Continue where you left off</CardDescription>
+                <CardTitle>Get Started</CardTitle>
+                <CardDescription>Create your first AI-powered course</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <h3 className="font-semibold">Advanced Mathematics</h3>
-                      <p className="text-sm text-gray-600">Progress: 65%</p>
-                    </div>
-                    <Button size="sm">Continue</Button>
-                  </div>
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <h3 className="font-semibold">Physics Fundamentals</h3>
-                      <p className="text-sm text-gray-600">Progress: 32%</p>
-                    </div>
-                    <Button size="sm">Continue</Button>
-                  </div>
+                <div className="text-center py-8">
+                  <Brain className="h-16 w-16 text-blue-600 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No courses yet</h3>
+                  <p className="text-gray-600 mb-4">
+                    Generate your first AI-powered course tailored to your learning needs
+                  </p>
+                  <Button
+                    onClick={() => setShowCourseGenerator(true)}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Generate Your First Course
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -98,10 +124,20 @@ const LearnerDashboard = () => {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button className="w-full" size="sm">
+                <Button
+                  className="w-full"
+                  size="sm"
+                  onClick={() => setShowCourseGenerator(true)}
+                >
+                  <Brain className="mr-2 h-4 w-4" />
                   Generate New Course
                 </Button>
-                <Button variant="outline" className="w-full" size="sm">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  size="sm"
+                  onClick={() => navigate('/marketplace')}
+                >
                   Browse Marketplace
                 </Button>
                 <Button variant="outline" className="w-full" size="sm">

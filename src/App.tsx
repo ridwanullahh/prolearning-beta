@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { initializeDatabase } from "./lib/database";
+import { db } from "./lib/github-sdk";
 import { authService, AuthUser } from "./lib/auth";
 import AuthLayout from "./components/auth/AuthLayout";
 import LearnerDashboard from "./pages/dashboard/LearnerDashboard";
@@ -29,7 +29,10 @@ const App = () => {
   useEffect(() => {
     const initialize = async () => {
       try {
-        await initializeDatabase();
+        console.log('Initializing GitHub SDK...');
+        await db.initialize();
+        console.log('GitHub SDK initialized successfully');
+        
         const user = authService.getCurrentUser();
         setCurrentUser(user);
         setIsInitialized(true);
