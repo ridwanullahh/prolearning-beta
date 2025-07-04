@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,18 +9,26 @@ import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { aiService, CourseGenerationOptions } from '@/lib/ai-service';
+import { CourseParser } from '@/lib/courseParser';
 import { db } from '@/lib/github-sdk';
 import { authService } from '@/lib/auth';
-import { Loader2, BookOpen, Brain, Target, Clock } from 'lucide-react';
+import { Loader2, BookOpen, Brain, Target, Clock, Upload } from 'lucide-react';
 
 interface CourseGenerationWizardProps {
   onCourseGenerated?: (course: any) => void;
 }
 
+interface ExtendedCourseGenerationOptions extends CourseGenerationOptions {
+  courseTitle: string;
+  curriculum: string;
+  studyMaterial?: File;
+}
+
 const CourseGenerationWizard = ({ onCourseGenerated }: CourseGenerationWizardProps) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [formData, setFormData] = useState<CourseGenerationOptions>({
+  const [formData, setFormData] = useState<ExtendedCourseGenerationOptions>({
+    courseTitle: '',
     academicLevel: '',
     subject: '',
     difficulty: 'beginner',
@@ -39,11 +46,12 @@ const CourseGenerationWizard = ({ onCourseGenerated }: CourseGenerationWizardPro
     tone: 'Professional',
     topicBased: false,
     specificTopic: '',
+    curriculum: '',
     additionalInstructions: ''
   });
 
   const { toast } = useToast();
-  const totalSteps = 4;
+  const totalSteps = 5;
 
   const academicLevels = [
     'Primary School', 'Junior Secondary', 'Senior Secondary', 
@@ -136,11 +144,13 @@ const CourseGenerationWizard = ({ onCourseGenerated }: CourseGenerationWizardPro
         });
       }
 
-      // Save the course to database
+      // Parse and save the course using CourseParser
       if (academicLevel && subject) {
+        const parsedData = CourseParser.parseAIGeneratedCourse(JSON.stringify(generatedCourse));
+        
         const course = await db.insert('courses', {
-          title: generatedCourse.title,
-          description: generatedCourse.description,
+          title: parsedData.course.title,
+          description: parsedData.course.description,
           creatorId: user.id,
           creatorType: 'ai',
           academicLevelId: academicLevel.id,
@@ -151,72 +161,14 @@ const CourseGenerationWizard = ({ onCourseGenerated }: CourseGenerationWizardPro
           currency: user.currency || 'USD',
           isPublished: true,
           isAiGenerated: true,
+          objectives: parsedData.course.objectives,
+          prerequisites: parsedData.course.prerequisites,
+          estimatedTime: `${parsedData.course.estimatedHours} hours`,
           tags: JSON.stringify([formData.subject, formData.academicLevel, formData.difficulty])
         });
 
-        // Save lessons
-        for (const lessonData of generatedCourse.lessons) {
-          const lesson = await db.insert('lessons', {
-            courseId: course.id,
-            title: lessonData.title,
-            description: lessonData.objectives?.join(', ') || '',
-            content: JSON.stringify(lessonData),
-            order: lessonData.id,
-            duration: lessonData.duration * 60, // Convert to minutes
-            type: 'text',
-            isRequired: true
-          });
-
-          // Save quiz if included
-          if (formData.includeQuiz && generatedCourse.quiz) {
-            await db.insert('quizzes', {
-              lessonId: lesson.id,
-              title: generatedCourse.quiz.title || 'Lesson Quiz',
-              description: 'Auto-generated quiz',
-              questions: JSON.stringify(generatedCourse.quiz.questions),
-              totalQuestions: generatedCourse.quiz.questions?.length || 5,
-              passingScore: 70,
-              timeLimit: 30,
-              attempts: 3,
-              isActive: true
-            });
-          }
-
-          // Save flashcards if included
-          if (formData.includeFlashcards && generatedCourse.flashcards) {
-            for (const flashcard of generatedCourse.flashcards) {
-              await db.insert('flashcards', {
-                lessonId: lesson.id,
-                front: flashcard.front,
-                back: flashcard.back,
-                difficulty: flashcard.difficulty || 'medium',
-                order: flashcard.id || 1
-              });
-            }
-          }
-
-          // Save mind map if included
-          if (formData.includeMindmap && generatedCourse.mindmap) {
-            await db.insert('mindMaps', {
-              lessonId: lesson.id,
-              title: 'Lesson Mind Map',
-              data: JSON.stringify(generatedCourse.mindmap)
-            });
-          }
-
-          // Save key points if included
-          if (formData.includeKeypoints && generatedCourse.keypoints) {
-            for (const keypoint of generatedCourse.keypoints) {
-              await db.insert('keyPoints', {
-                lessonId: lesson.id,
-                point: keypoint.point,
-                explanation: keypoint.explanation || '',
-                order: keypoint.id || 1,
-                importance: keypoint.importance || 'medium'
-              });
-            }
-          }
-        }
+        // Save lessons and related content using CourseParser
+        await CourseParser.saveParsedCourseToDatabase(parsedData, course.id, db);
 
         // Update usage count
         await db.update('aiGenerationUsage', currentUsage.id, {
@@ -233,7 +185,7 @@ const CourseGenerationWizard = ({ onCourseGenerated }: CourseGenerationWizardPro
 
         toast({
           title: "Course Generated Successfully!",
-          description: `"${generatedCourse.title}" has been created and added to your courses.`
+          description: `"${parsedData.course.title}" has been created and added to your courses.`
         });
 
         if (onCourseGenerated) {
@@ -262,6 +214,15 @@ const CourseGenerationWizard = ({ onCourseGenerated }: CourseGenerationWizardPro
               <h3 className="text-lg font-semibold">Course Basics</h3>
             </div>
             
+            <div className="space-y-2">
+              <Label htmlFor="courseTitle">Course Title</Label>
+              <Input
+                placeholder="Enter course title (AI will enhance this)"
+                value={formData.courseTitle}
+                onChange={(e) => setFormData({...formData, courseTitle: e.target.value})}
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="academicLevel">Academic Level</Label>
               <Select value={formData.academicLevel} onValueChange={(value) => setFormData({...formData, academicLevel: value})}>
@@ -488,6 +449,35 @@ const CourseGenerationWizard = ({ onCourseGenerated }: CourseGenerationWizardPro
         return (
           <div className="space-y-4">
             <div className="flex items-center space-x-2 mb-4">
+              <Target className="h-5 w-5 text-indigo-600" />
+              <h3 className="text-lg font-semibold">Personalization</h3>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="curriculum">Curriculum (Optional)</Label>
+              <Textarea
+                placeholder="If you have a predefined curriculum you want the AI to follow, paste it here..."
+                value={formData.curriculum}
+                onChange={(e) => setFormData({...formData, curriculum: e.target.value})}
+                rows={6}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="studyMaterial">Study Material (Coming Soon)</Label>
+              <div className="border border-dashed border-gray-300 rounded-lg p-4 text-center text-gray-500">
+                <Upload className="mx-auto h-8 w-8 mb-2" />
+                <p className="text-sm">File upload feature coming soon, In'sha'Allah</p>
+                <p className="text-xs">Upload your study materials for AI to use</p>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 5:
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2 mb-4">
               <Clock className="h-5 w-5 text-orange-600" />
               <h3 className="text-lg font-semibold">Final Review</h3>
             </div>
@@ -505,6 +495,7 @@ const CourseGenerationWizard = ({ onCourseGenerated }: CourseGenerationWizardPro
             <div className="bg-gray-50 p-4 rounded-lg">
               <h4 className="font-semibold mb-2">Course Summary:</h4>
               <ul className="text-sm space-y-1">
+                <li><strong>Title:</strong> {formData.courseTitle || 'AI Generated'}</li>
                 <li><strong>Level:</strong> {formData.academicLevel}</li>
                 <li><strong>Subject:</strong> {formData.subject}</li>
                 <li><strong>Difficulty:</strong> {formData.difficulty}</li>
@@ -516,6 +507,7 @@ const CourseGenerationWizard = ({ onCourseGenerated }: CourseGenerationWizardPro
                   formData.includeMindmap && 'Mind Map',
                   formData.includeKeypoints && 'Key Points'
                 ].filter(Boolean).join(', ')}</li>
+                {formData.curriculum && <li><strong>Custom Curriculum:</strong> Yes</li>}
               </ul>
             </div>
           </div>

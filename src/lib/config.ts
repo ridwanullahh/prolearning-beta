@@ -11,6 +11,9 @@ export const config = {
     cloudflareAccountId: import.meta.env.VITE_CLOUDFLARE_ACCOUNT_ID || '',
     cloudflareToken: import.meta.env.VITE_CLOUDFLARE_API_TOKEN || '',
     openai: import.meta.env.VITE_OPENAI_API_KEY || '',
+    primaryProvider: import.meta.env.VITE_AI_PRIMARY_PROVIDER || 'chutes',
+    chutesModel: import.meta.env.VITE_CHUTES_MODEL || 'deepseek-ai/DeepSeek-V3-0324',
+    geminiModel: import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.0-flash-exp',
   },
   payment: {
     paystackPublicKey: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || '',

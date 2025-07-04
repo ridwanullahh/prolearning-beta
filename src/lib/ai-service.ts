@@ -40,7 +40,7 @@ class ChutesAIProvider implements AIProvider {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'deepseek-ai/DeepSeek-V3-0324',
+          model: config.ai.chutesModel,
           messages: [
             {
               role: 'system',
@@ -113,9 +113,13 @@ class ChutesAIProvider implements AIProvider {
 
   private parseCourseResponse(content: string): any {
     try {
+      // Extract JSON from markdown code blocks if present
+      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[1]);
+      }
       return JSON.parse(content);
     } catch {
-      // Fallback parsing if JSON is malformed
       return {
         title: 'Generated Course',
         description: content.substring(0, 200),
@@ -138,7 +142,7 @@ class GeminiAIProvider implements AIProvider {
 
   async generateCourse(prompt: string): Promise<any> {
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${config.ai.geminiKey}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${config.ai.geminiModel}:generateContent?key=${config.ai.geminiKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -342,6 +346,13 @@ class AIService {
       new GeminiAIProvider(),
       new CloudflareAIProvider()
     ];
+    
+    // Sort providers based on primary provider setting
+    this.providers.sort((a, b) => {
+      if (a.name.toLowerCase().includes(config.ai.primaryProvider)) return -1;
+      if (b.name.toLowerCase().includes(config.ai.primaryProvider)) return 1;
+      return 0;
+    });
   }
 
   private getAvailableProviders(): AIProvider[] {
@@ -429,6 +440,7 @@ class AIService {
 
   private buildCoursePrompt(spec: any): string {
     const {
+      courseTitle,
       academicLevel,
       subject,
       courseType,
@@ -439,11 +451,13 @@ class AIService {
       tone,
       quizOptions,
       flashcardOptions,
+      curriculum,
       additionalComments
     } = spec;
 
     let prompt = `Create a comprehensive educational course with the following specifications:
 
+${courseTitle ? `Course Title: ${courseTitle}` : ''}
 Academic Level: ${academicLevel}
 Subject: ${subject}
 Course Type: ${courseType}
@@ -452,6 +466,7 @@ Difficulty: ${difficulty}
 Duration: ${duration} minutes
 Learning Style: ${learningStyle}
 Tone: ${tone}
+${curriculum ? `Curriculum to Follow: ${curriculum}` : ''}
 
 Course Requirements:
 - Generate progressive lessons with clear learning objectives
@@ -471,7 +486,7 @@ ${additionalComments ? `Additional Requirements: ${additionalComments}` : ''}
 
 Return the course data in this JSON format:
 {
-  "title": "Course Title",
+  "title": "${courseTitle || 'Course Title'}",
   "description": "Course description",
   "objectives": ["Learning objective 1", "Learning objective 2"],
   "lessons": [

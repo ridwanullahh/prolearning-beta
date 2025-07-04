@@ -714,6 +714,26 @@ const schemas: Record<string, SchemaDefinition> = {
       isRead: false,
       createdAt: new Date().toISOString()
     }
+  },
+  quizAttempts: {
+    required: ['userId', 'lessonId', 'courseId', 'score', 'submittedAt'],
+    types: {
+      id: 'string',
+      uid: 'string',
+      userId: 'string',
+      lessonId: 'string',
+      courseId: 'string',
+      score: 'number',
+      answers: 'string',
+      submittedAt: 'date',
+      timeSpent: 'number',
+      isCompleted: 'boolean'
+    },
+    defaults: {
+      isCompleted: true,
+      timeSpent: 0,
+      submittedAt: new Date().toISOString()
+    }
   }
 };
 
