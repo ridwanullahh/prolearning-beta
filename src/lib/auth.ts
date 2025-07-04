@@ -1,3 +1,4 @@
+
 import { db } from './github-sdk';
 
 export interface AuthUser {
@@ -16,23 +17,23 @@ class AuthService {
 
   async login(email: string, password: string): Promise<AuthUser> {
     try {
-      console.log('Attempting login for:', email);
+      console.log('🔍 [AUTH SERVICE] Attempting login for:', email);
       const token = await db.login(email, password);
       
       if (typeof token !== 'string') {
-        console.error('OTP not supported in this implementation');
+        console.error('🔍 [AUTH SERVICE] OTP not supported in this implementation');
         throw new Error('OTP not supported in this implementation');
       }
 
-      console.log('Login successful, getting user data...');
+      console.log('🔍 [AUTH SERVICE] Login successful, getting user data...');
       const user = db.getCurrentUser(token);
       if (!user) {
-        console.error('Failed to get user data after login');
+        console.error('🔍 [AUTH SERVICE] Failed to get user data after login');
         throw new Error('Failed to get user data');
       }
 
       if (!user.isActive) {
-        console.error('Account is deactivated for user:', email);
+        console.error('🔍 [AUTH SERVICE] Account is deactivated for user:', email);
         throw new Error('Account is deactivated');
       }
 
@@ -52,10 +53,10 @@ class AuthService {
       localStorage.setItem('auth_user', JSON.stringify(this.currentUser));
       localStorage.setItem('auth_token', token);
       
-      console.log('User authenticated successfully:', this.currentUser.email);
+      console.log('🔍 [AUTH SERVICE] User authenticated successfully:', this.currentUser.email);
       return this.currentUser;
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('🔍 [AUTH SERVICE] Login error:', error);
       throw new Error(error.message || 'Login failed');
     }
   }
@@ -68,6 +69,7 @@ class AuthService {
     country?: string;
   }): Promise<AuthUser> {
     try {
+      console.log('🔍 [AUTH SERVICE] Starting registration for:', userData.email);
       const currency = this.getCurrencyByCountry(userData.country);
       
       const user = await db.register(userData.email, userData.password, {
@@ -78,6 +80,8 @@ class AuthService {
         isActive: true,
         profileComplete: false
       });
+
+      console.log('🔍 [AUTH SERVICE] User registered, creating profile and wallet...');
 
       // Create user profile
       await db.insert('userProfiles', {
@@ -123,13 +127,16 @@ class AuthService {
       localStorage.setItem('auth_user', JSON.stringify(this.currentUser));
       localStorage.setItem('auth_token', token);
       
+      console.log('🔍 [AUTH SERVICE] Registration completed successfully for:', userData.email);
       return this.currentUser;
     } catch (error: any) {
+      console.error('🔍 [AUTH SERVICE] Registration error:', error);
       throw new Error(error.message || 'Registration failed');
     }
   }
 
   async logout(): Promise<void> {
+    console.log('🔍 [AUTH SERVICE] Logging out user');
     if (this.currentToken) {
       db.destroySession(this.currentToken);
     }
@@ -154,9 +161,11 @@ class AuthService {
         if (session) {
           this.currentUser = JSON.parse(stored);
           this.currentToken = token;
+          console.log('🔍 [AUTH SERVICE] Session restored from localStorage for:', this.currentUser.email);
           return this.currentUser;
         }
       } catch {
+        console.log('🔍 [AUTH SERVICE] Failed to restore session, clearing localStorage');
         localStorage.removeItem('auth_user');
         localStorage.removeItem('auth_token');
       }

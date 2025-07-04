@@ -893,14 +893,7 @@ class GitHubDatabase {
 
   private async _initialize(): Promise<void> {
     try {
-      console.log('Validating GitHub credentials...');
-      console.log('GitHub owner:', config.github.owner);
-      console.log('GitHub repo:', config.github.repo);
-      console.log('GitHub token exists:', !!config.github.token);
-      
-      if (config.github.token === 'your-github-token' || !config.github.token) {
-        throw new Error('Please set VITE_GITHUB_TOKEN in your environment variables');
-      }
+      console.log('🔍 [SDK DEBUG] Starting GitHub SDK initialization...');
       
       await this.sdk.init();
       
@@ -913,9 +906,9 @@ class GitHubDatabase {
       await this.initializeDefaultData();
       
       this.isInitialized = true;
-      console.log('GitHub SDK initialized successfully');
+      console.log('🔍 [SDK DEBUG] GitHub SDK initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize GitHub SDK:', error);
+      console.error('🔍 [SDK DEBUG] Failed to initialize GitHub SDK:', error);
       throw error;
     }
   }
@@ -1029,7 +1022,7 @@ class GitHubDatabase {
         await this.sdk.bulkInsert('badges', defaultBadges);
       }
     } catch (error) {
-      console.error('Error initializing default data:', error);
+      console.error('🔍 [SDK DEBUG] Error initializing default data:', error);
     }
   }
 
@@ -1043,7 +1036,7 @@ class GitHubDatabase {
           const jitter = Math.random() * 1000;
           const delay = baseDelay + jitter;
           
-          console.log(`Conflict detected, retrying in ${delay}ms (attempt ${i + 1}/${retries})`);
+          console.log(`🔍 [SDK DEBUG] Conflict detected, retrying in ${delay}ms (attempt ${i + 1}/${retries})`);
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
