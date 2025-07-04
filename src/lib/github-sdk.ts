@@ -27,7 +27,10 @@ const schemas: Record<string, SchemaDefinition> = {
       language: 'string',
       learningStyle: 'string',
       subscription: 'string',
-      subscriptionExpiry: 'date'
+      subscriptionExpiry: 'date',
+      gamificationPoints: 'number',
+      level: 'number',
+      badges: 'string'
     },
     defaults: {
       isActive: true,
@@ -35,6 +38,9 @@ const schemas: Record<string, SchemaDefinition> = {
       language: 'en',
       learningStyle: 'visual',
       subscription: 'free',
+      gamificationPoints: 0,
+      level: 1,
+      badges: '[]',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
@@ -123,7 +129,14 @@ const schemas: Record<string, SchemaDefinition> = {
       instructor: 'string',
       lastUpdated: 'date',
       featured: 'boolean',
-      status: 'string'
+      status: 'string',
+      prerequisiteCourses: 'string',
+      isDripEnabled: 'boolean',
+      dripSettings: 'string',
+      certificateEnabled: 'boolean',
+      badgeEnabled: 'boolean',
+      forumEnabled: 'boolean',
+      peerReviewEnabled: 'boolean'
     },
     defaults: {
       isPublished: false,
@@ -135,19 +148,25 @@ const schemas: Record<string, SchemaDefinition> = {
       courseType: 'self-paced',
       featured: false,
       status: 'draft',
+      prerequisiteCourses: '[]',
+      isDripEnabled: false,
+      dripSettings: '{}',
+      certificateEnabled: true,
+      badgeEnabled: true,
+      forumEnabled: true,
+      peerReviewEnabled: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
   },
   lessons: {
-    required: ['courseId', 'title', 'description', 'content', 'order', 'duration', 'type', 'isRequired'],
+    required: ['courseId', 'title', 'description', 'order', 'duration', 'type', 'isRequired'],
     types: {
       id: 'string',
       uid: 'string',
       courseId: 'string',
       title: 'string',
       description: 'string',
-      content: 'string',
       order: 'number',
       duration: 'number',
       type: 'string',
@@ -158,12 +177,43 @@ const schemas: Record<string, SchemaDefinition> = {
       attachments: 'string',
       objectives: 'string',
       notes: 'string',
-      isPublished: 'boolean'
+      isPublished: 'boolean',
+      prerequisiteLessons: 'string',
+      releaseType: 'string',
+      scheduledReleaseDate: 'date',
+      dripDays: 'number',
+      interactiveElements: 'string'
     },
     defaults: {
       isRequired: true,
       isPublished: true,
       type: 'text',
+      prerequisiteLessons: '[]',
+      releaseType: 'immediate',
+      dripDays: 0,
+      interactiveElements: '[]',
+      createdAt: new Date().toISOString()
+    }
+  },
+  lessonContents: {
+    required: ['lessonId', 'type', 'content', 'order'],
+    types: {
+      id: 'string',
+      uid: 'string',
+      lessonId: 'string',
+      type: 'string',
+      content: 'string',
+      order: 'number',
+      title: 'string',
+      description: 'string',
+      mediaUrl: 'string',
+      duration: 'number',
+      metadata: 'string',
+      isRequired: 'boolean',
+      createdAt: 'date'
+    },
+    defaults: {
+      isRequired: true,
       createdAt: new Date().toISOString()
     }
   },
@@ -185,7 +235,9 @@ const schemas: Record<string, SchemaDefinition> = {
       quizType: 'string',
       instructions: 'string',
       showResults: 'boolean',
-      shuffleQuestions: 'boolean'
+      shuffleQuestions: 'boolean',
+      gradingLogic: 'string',
+      feedback: 'string'
     },
     defaults: {
       isActive: true,
@@ -193,7 +245,9 @@ const schemas: Record<string, SchemaDefinition> = {
       quizType: 'practice',
       showResults: true,
       shuffleQuestions: false,
-      passingScore: 70
+      passingScore: 70,
+      gradingLogic: 'standard',
+      feedback: 'immediate'
     }
   },
   flashcards: {
@@ -210,7 +264,9 @@ const schemas: Record<string, SchemaDefinition> = {
       order: 'number',
       category: 'string',
       hint: 'string',
-      explanation: 'string'
+      explanation: 'string',
+      mediaUrl: 'string',
+      audio: 'string'
     }
   },
   mindMaps: {
@@ -225,9 +281,12 @@ const schemas: Record<string, SchemaDefinition> = {
       createdAt: 'date',
       description: 'string',
       nodeCount: 'number',
-      connections: 'string'
+      connections: 'string',
+      style: 'string',
+      isPublic: 'boolean'
     },
     defaults: {
+      isPublic: false,
       createdAt: new Date().toISOString()
     }
   },
@@ -243,7 +302,77 @@ const schemas: Record<string, SchemaDefinition> = {
       order: 'number',
       importance: 'string',
       category: 'string',
-      examples: 'string'
+      examples: 'string',
+      mediaUrl: 'string',
+      references: 'string'
+    }
+  },
+  assignments: {
+    required: ['lessonId', 'title', 'description', 'type', 'dueDate', 'maxPoints'],
+    types: {
+      id: 'string',
+      uid: 'string',
+      lessonId: 'string',
+      courseId: 'string',
+      title: 'string',
+      description: 'string',
+      type: 'string',
+      instructions: 'string',
+      dueDate: 'date',
+      maxPoints: 'number',
+      allowLateSubmission: 'boolean',
+      fileTypes: 'string',
+      maxFileSize: 'number',
+      peerReviewEnabled: 'boolean',
+      rubric: 'string',
+      createdAt: 'date'
+    },
+    defaults: {
+      allowLateSubmission: true,
+      fileTypes: '["pdf","doc","docx","txt"]',
+      maxFileSize: 10,
+      peerReviewEnabled: false,
+      createdAt: new Date().toISOString()
+    }
+  },
+  submissions: {
+    required: ['assignmentId', 'userId', 'content', 'submittedAt'],
+    types: {
+      id: 'string',
+      uid: 'string',
+      assignmentId: 'string',
+      userId: 'string',
+      content: 'string',
+      fileUrls: 'string',
+      submittedAt: 'date',
+      status: 'string',
+      grade: 'number',
+      feedback: 'string',
+      gradedAt: 'date',
+      gradedBy: 'string',
+      lateSubmission: 'boolean'
+    },
+    defaults: {
+      status: 'submitted',
+      lateSubmission: false
+    }
+  },
+  peerReviews: {
+    required: ['submissionId', 'reviewerId', 'rating', 'feedback'],
+    types: {
+      id: 'string',
+      uid: 'string',
+      submissionId: 'string',
+      reviewerId: 'string',
+      rating: 'number',
+      feedback: 'string',
+      criteria: 'string',
+      createdAt: 'date',
+      isAnonymous: 'boolean'
+    },
+    defaults: {
+      isAnonymous: true,
+      createdAt: new Date().toISOString()
     }
   },
   userProgress: {
@@ -261,11 +390,18 @@ const schemas: Record<string, SchemaDefinition> = {
       currentLesson: 'string',
       completedLessons: 'string',
       quizScores: 'string',
-      certificates: 'string'
+      certificates: 'string',
+      badges: 'string',
+      points: 'number'
     },
     defaults: {
       progressPercentage: 0,
       totalTimeSpent: 0,
+      completedLessons: '[]',
+      quizScores: '{}',
+      certificates: '[]',
+      badges: '[]',
+      points: 0,
       lastAccessedAt: new Date().toISOString()
     }
   },
@@ -284,12 +420,57 @@ const schemas: Record<string, SchemaDefinition> = {
       currency: 'string',
       paymentMethod: 'string',
       transactionId: 'string',
-      refundStatus: 'string'
+      refundStatus: 'string',
+      accessLevel: 'string',
+      completionDate: 'date'
     },
     defaults: {
       enrolledAt: new Date().toISOString(),
       status: 'active',
-      paymentStatus: 'free'
+      paymentStatus: 'free',
+      accessLevel: 'full'
+    }
+  },
+  carts: {
+    required: ['userId', 'items'],
+    types: {
+      id: 'string',
+      uid: 'string',
+      userId: 'string',
+      items: 'string',
+      totalAmount: 'number',
+      currency: 'string',
+      createdAt: 'date',
+      updatedAt: 'date'
+    },
+    defaults: {
+      totalAmount: 0,
+      currency: 'USD',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  },
+  orders: {
+    required: ['userId', 'items', 'totalAmount', 'currency', 'status'],
+    types: {
+      id: 'string',
+      uid: 'string',
+      userId: 'string',
+      items: 'string',
+      totalAmount: 'number',
+      currency: 'string',
+      status: 'string',
+      paymentMethod: 'string',
+      transactionId: 'string',
+      createdAt: 'date',
+      completedAt: 'date',
+      billingAddress: 'string',
+      discountApplied: 'number'
+    },
+    defaults: {
+      status: 'pending',
+      discountApplied: 0,
+      createdAt: new Date().toISOString()
     }
   },
   wallets: {
@@ -338,6 +519,126 @@ const schemas: Record<string, SchemaDefinition> = {
       status: 'pending',
       fee: 0,
       createdAt: new Date().toISOString()
+    }
+  },
+  certificates: {
+    required: ['userId', 'courseId', 'certificateUrl', 'issuedAt'],
+    types: {
+      id: 'string',
+      uid: 'string',
+      userId: 'string',
+      courseId: 'string',
+      certificateUrl: 'string',
+      issuedAt: 'date',
+      certificateId: 'string',
+      validUntil: 'date',
+      template: 'string',
+      metadata: 'string'
+    },
+    defaults: {
+      issuedAt: new Date().toISOString()
+    }
+  },
+  badges: {
+    required: ['name', 'description', 'criteria', 'icon'],
+    types: {
+      id: 'string',
+      uid: 'string',
+      name: 'string',
+      description: 'string',
+      criteria: 'string',
+      icon: 'string',
+      color: 'string',
+      category: 'string',
+      points: 'number',
+      isActive: 'boolean'
+    },
+    defaults: {
+      isActive: true,
+      points: 10
+    }
+  },
+  userBadges: {
+    required: ['userId', 'badgeId', 'earnedAt'],
+    types: {
+      id: 'string',
+      uid: 'string',
+      userId: 'string',
+      badgeId: 'string',
+      earnedAt: 'date',
+      courseId: 'string',
+      lessonId: 'string'
+    }
+  },
+  forums: {
+    required: ['courseId', 'title', 'description'],
+    types: {
+      id: 'string',
+      uid: 'string',
+      courseId: 'string',
+      title: 'string',
+      description: 'string',
+      isActive: 'boolean',
+      moderatorIds: 'string',
+      createdAt: 'date',
+      aiModerationEnabled: 'boolean',
+      settings: 'string'
+    },
+    defaults: {
+      isActive: true,
+      moderatorIds: '[]',
+      aiModerationEnabled: true,
+      settings: '{}',
+      createdAt: new Date().toISOString()
+    }
+  },
+  forumPosts: {
+    required: ['forumId', 'userId', 'title', 'content'],
+    types: {
+      id: 'string',
+      uid: 'string',
+      forumId: 'string',
+      userId: 'string',
+      title: 'string',
+      content: 'string',
+      createdAt: 'date',
+      updatedAt: 'date',
+      isSticky: 'boolean',
+      isLocked: 'boolean',
+      viewCount: 'number',
+      replyCount: 'number',
+      lastReplyAt: 'date',
+      tags: 'string'
+    },
+    defaults: {
+      isSticky: false,
+      isLocked: false,
+      viewCount: 0,
+      replyCount: 0,
+      tags: '[]',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  },
+  forumReplies: {
+    required: ['postId', 'userId', 'content'],
+    types: {
+      id: 'string',
+      uid: 'string',
+      postId: 'string',
+      userId: 'string',
+      content: 'string',
+      createdAt: 'date',
+      updatedAt: 'date',
+      parentReplyId: 'string',
+      isModerated: 'boolean',
+      votes: 'number'
+    },
+    defaults: {
+      isModerated: false,
+      votes: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     }
   },
   aiGenerationUsage: {
@@ -394,22 +695,6 @@ const schemas: Record<string, SchemaDefinition> = {
       isVerified: false,
       helpful: 0,
       createdAt: new Date().toISOString()
-    }
-  },
-  certificates: {
-    required: ['userId', 'courseId', 'certificateUrl', 'issuedAt'],
-    types: {
-      id: 'string',
-      uid: 'string',
-      userId: 'string',
-      courseId: 'string',
-      certificateUrl: 'string',
-      issuedAt: 'date',
-      certificateId: 'string',
-      validUntil: 'date'
-    },
-    defaults: {
-      issuedAt: new Date().toISOString()
     }
   },
   notifications: {
@@ -590,6 +875,16 @@ class GitHubDatabase {
         ];
 
         await this.sdk.bulkInsert('platformSettings', defaultSettings);
+
+        // Initialize default badges
+        const defaultBadges = [
+          { name: 'First Course', description: 'Completed your first course', criteria: 'complete_first_course', icon: '🎓', color: 'blue', category: 'achievement', points: 50 },
+          { name: 'Quick Learner', description: 'Completed a course in under 24 hours', criteria: 'fast_completion', icon: '⚡', color: 'yellow', category: 'speed', points: 100 },
+          { name: 'Perfect Score', description: 'Achieved 100% on a quiz', criteria: 'perfect_quiz', icon: '💯', color: 'green', category: 'academic', points: 75 },
+          { name: 'Consistent Learner', description: 'Studied for 7 consecutive days', criteria: 'daily_streak_7', icon: '🔥', color: 'red', category: 'consistency', points: 200 }
+        ];
+
+        await this.sdk.bulkInsert('badges', defaultBadges);
       }
     } catch (error) {
       console.error('Error initializing default data:', error);

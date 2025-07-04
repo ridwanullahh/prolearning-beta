@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +17,7 @@ import {
 } from 'lucide-react';
 import { db } from '@/lib/github-sdk';
 import { authService } from '@/lib/auth';
-import LessonViewer from './LessonViewer';
+import EnhancedLessonViewer from './EnhancedLessonViewer';
 
 interface Course {
   id: string;
@@ -42,6 +41,7 @@ const CourseViewer = () => {
   const [lessons, setLessons] = useState<any[]>([]);
   const [currentLesson, setCurrentLesson] = useState<any>(null);
   const [progress, setProgress] = useState(0);
+  const [completedLessons, setCompletedLessons] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const user = authService.getCurrentUser();
 
@@ -54,17 +54,28 @@ const CourseViewer = () => {
   const loadCourse = async (courseId: string) => {
     try {
       setLoading(true);
-      const [courseData, lessonsData] = await Promise.all([
+      const [courseData, lessonsData, userProgressData] = await Promise.all([
         db.getItem('courses', courseId),
         db.queryBuilder('lessons')
           .where((lesson: any) => lesson.courseId === courseId)
           .sort('order', 'asc')
-          .exec()
+          .exec(),
+        user ? db.queryBuilder('userProgress')
+          .where((p: any) => p.userId === user.id && p.courseId === courseId)
+          .exec() : Promise.resolve([])
       ]);
 
       if (courseData) {
         setCourse(courseData);
         setLessons(lessonsData);
+        
+        // Load user progress
+        if (userProgressData.length > 0) {
+          const progress = userProgressData[0];
+          setProgress(progress.progressPercentage || 0);
+          setCompletedLessons(JSON.parse(progress.completedLessons || '[]'));
+        }
+        
         if (lessonsData.length > 0) {
           setCurrentLesson(lessonsData[0]);
         }
@@ -80,20 +91,38 @@ const CourseViewer = () => {
     if (!user || !course) return;
 
     try {
-      // Update progress
-      const completed = lessons.filter(l => l.id === lessonId || l.completed).length;
-      const newProgress = (completed / lessons.length) * 100;
-      setProgress(newProgress);
+      const newCompletedLessons = [...completedLessons];
+      if (!newCompletedLessons.includes(lessonId)) {
+        newCompletedLessons.push(lessonId);
+      }
 
-      // Save progress to database
-      await db.insert('userProgress', {
-        userId: user.id,
-        courseId: course.id,
-        lessonId,
-        progressPercentage: newProgress,
-        lastAccessedAt: new Date().toISOString(),
-        completedAt: newProgress === 100 ? new Date().toISOString() : undefined
-      });
+      const newProgress = (newCompletedLessons.length / lessons.length) * 100;
+      setProgress(newProgress);
+      setCompletedLessons(newCompletedLessons);
+
+      // Update progress in database
+      const existingProgress = await db.queryBuilder('userProgress')
+        .where((p: any) => p.userId === user.id && p.courseId === course.id)
+        .exec();
+
+      if (existingProgress.length > 0) {
+        await db.update('userProgress', existingProgress[0].id, {
+          progressPercentage: newProgress,
+          completedLessons: JSON.stringify(newCompletedLessons),
+          lastAccessedAt: new Date().toISOString(),
+          completedAt: newProgress === 100 ? new Date().toISOString() : undefined
+        });
+      } else {
+        await db.insert('userProgress', {
+          userId: user.id,
+          courseId: course.id,
+          lessonId,
+          progressPercentage: newProgress,
+          completedLessons: JSON.stringify(newCompletedLessons),
+          lastAccessedAt: new Date().toISOString(),
+          totalTimeSpent: 0
+        });
+      }
     } catch (error) {
       console.error('Error updating progress:', error);
     }
@@ -191,7 +220,7 @@ const CourseViewer = () => {
           {/* Lesson Content */}
           <div className="lg:col-span-3">
             {currentLesson ? (
-              <LessonViewer
+              <EnhancedLessonViewer
                 lesson={currentLesson}
                 onComplete={() => handleLessonComplete(currentLesson.id)}
                 onNext={goToNextLesson}
@@ -231,7 +260,7 @@ const CourseViewer = () => {
                     >
                       <div className="flex items-center gap-3">
                         <div className="flex-shrink-0">
-                          {lesson.completed ? (
+                          {completedLessons.includes(lesson.id) ? (
                             <CheckCircle className="h-5 w-5 text-green-600" />
                           ) : (
                             <Play className="h-5 w-5 text-gray-400" />

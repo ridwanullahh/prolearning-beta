@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,24 +12,30 @@ import {
   Plus, 
   Trash2, 
   ArrowLeft, 
-  Eye, 
+  Eye,
   Upload,
   BookOpen,
   Settings,
-  Users
+  Users,
+  Edit,
+  Calendar,
+  Clock
 } from 'lucide-react';
 import { db } from '@/lib/github-sdk';
 import { authService } from '@/lib/auth';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 interface Lesson {
   id?: string;
   title: string;
   description: string;
-  content: string;
   order: number;
   duration: number;
   type: string;
+  isRequired: boolean;
+  releaseType: string;
+  scheduledReleaseDate?: string;
+  dripDays: number;
 }
 
 const CourseBuilder = () => {
@@ -49,11 +54,14 @@ const CourseBuilder = () => {
     currency: 'USD',
     academicLevelId: '',
     subjectId: '',
-    isPublished: false
+    isPublished: false,
+    prerequisiteCourses: [] as string[]
   });
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [academicLevels, setAcademicLevels] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
+  const [availableCourses, setAvailableCourses] = useState<any[]>([]);
+  const { toast } = useToast();
   const user = authService.getCurrentUser();
 
   useEffect(() => {
@@ -65,12 +73,16 @@ const CourseBuilder = () => {
 
   const loadFormData = async () => {
     try {
-      const [levelsData, subjectsData] = await Promise.all([
+      const [levelsData, subjectsData, coursesData] = await Promise.all([
         db.get('academicLevels'),
-        db.get('subjects')
+        db.get('subjects'),
+        db.queryBuilder('courses')
+          .where((c: any) => c.creatorId !== user?.id && c.isPublished)
+          .exec()
       ]);
       setAcademicLevels(levelsData);
       setSubjects(subjectsData);
+      setAvailableCourses(coursesData);
     } catch (error) {
       console.error('Error loading form data:', error);
     }
@@ -88,8 +100,34 @@ const CourseBuilder = () => {
       ]);
 
       if (courseData) {
-        setCourse(courseData);
-        setLessons(lessonsData || []);
+        setCourse({
+          title: courseData.title || '',
+          description: courseData.description || '',
+          objectives: courseData.objectives || '',
+          prerequisites: courseData.prerequisites || '',
+          difficulty: courseData.difficulty || 'beginner',
+          duration: courseData.duration || 1,
+          price: courseData.price || 0,
+          currency: courseData.currency || 'USD',
+          academicLevelId: courseData.academicLevelId || '',
+          subjectId: courseData.subjectId || '',
+          isPublished: courseData.isPublished || false,
+          prerequisiteCourses: JSON.parse(courseData.prerequisiteCourses || '[]')
+        });
+        
+        const mappedLessons: Lesson[] = lessonsData.map((lesson: any) => ({
+          id: lesson.id,
+          title: lesson.title || '',
+          description: lesson.description || '',
+          order: lesson.order || 1,
+          duration: lesson.duration || 30,
+          type: lesson.type || 'text',
+          isRequired: lesson.isRequired !== false,
+          releaseType: lesson.releaseType || 'immediate',
+          scheduledReleaseDate: lesson.scheduledReleaseDate,
+          dripDays: lesson.dripDays || 0
+        }));
+        setLessons(mappedLessons);
       }
     } catch (error) {
       console.error('Error loading course:', error);
@@ -114,29 +152,18 @@ const CourseBuilder = () => {
         creatorId: user.id,
         creatorType: 'instructor',
         isAiGenerated: false,
+        prerequisiteCourses: JSON.stringify(course.prerequisiteCourses),
         updatedAt: new Date().toISOString()
       };
 
       let savedCourse;
       if (isEditing && id) {
         savedCourse = await db.update('courses', id, courseData);
+        savedCourse.id = id;
       } else {
         savedCourse = await db.insert('courses', courseData);
         setIsEditing(true);
-      }
-
-      // Save lessons
-      for (const lesson of lessons) {
-        const lessonData = {
-          ...lesson,
-          courseId: savedCourse.id
-        };
-
-        if (lesson.id) {
-          await db.update('lessons', lesson.id, lessonData);
-        } else {
-          await db.insert('lessons', lessonData);
-        }
+        navigate(`/instruct/courses/${savedCourse.id}/edit`, { replace: true });
       }
 
       toast({
@@ -144,9 +171,6 @@ const CourseBuilder = () => {
         description: 'Course saved successfully',
       });
 
-      if (!isEditing) {
-        navigate(`/instruct/courses/${savedCourse.id}/edit`);
-      }
     } catch (error) {
       console.error('Error saving course:', error);
       toast({
@@ -191,27 +215,47 @@ const CourseBuilder = () => {
     }
   };
 
-  const addLesson = () => {
-    const newLesson: Lesson = {
-      title: '',
-      description: '',
-      content: '',
-      order: lessons.length + 1,
-      duration: 30,
-      type: 'text'
-    };
-    setLessons([...lessons, newLesson]);
+  const createNewLesson = () => {
+    if (!id) {
+      toast({
+        title: 'Save Course First',
+        description: 'Please save your course before adding lessons',
+        variant: 'destructive'
+      });
+      return;
+    }
+    navigate(`/instruct/courses/${id}/lessons/new`);
   };
 
-  const updateLesson = (index: number, field: string, value: any) => {
-    const updatedLessons = [...lessons];
-    updatedLessons[index] = { ...updatedLessons[index], [field]: value };
-    setLessons(updatedLessons);
+  const editLesson = (lessonId: string) => {
+    navigate(`/instruct/courses/${id}/lessons/${lessonId}/edit`);
   };
 
-  const removeLesson = (index: number) => {
-    const updatedLessons = lessons.filter((_, i) => i !== index);
-    setLessons(updatedLessons);
+  const deleteLesson = async (lessonId: string) => {
+    try {
+      await db.delete('lessons', lessonId);
+      setLessons(prev => prev.filter(l => l.id !== lessonId));
+      toast({
+        title: 'Success',
+        description: 'Lesson deleted successfully',
+      });
+    } catch (error) {
+      console.error('Error deleting lesson:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete lesson',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const togglePrerequisiteCourse = (courseId: string) => {
+    setCourse(prev => ({
+      ...prev,
+      prerequisiteCourses: prev.prerequisiteCourses.includes(courseId)
+        ? prev.prerequisiteCourses.filter(id => id !== courseId)
+        : [...prev.prerequisiteCourses, courseId]
+    }));
   };
 
   return (
@@ -418,6 +462,33 @@ const CourseBuilder = () => {
                     rows={3}
                   />
                 </div>
+
+                {/* Prerequisite Courses */}
+                <div>
+                  <Label>Prerequisite Courses (Optional)</Label>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Select courses that students must complete before taking this course
+                  </p>
+                  <div className="max-h-48 overflow-y-auto border rounded-md p-3 space-y-2">
+                    {availableCourses.map(availableCourse => (
+                      <div key={availableCourse.id} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id={`prereq-${availableCourse.id}`}
+                          checked={course.prerequisiteCourses.includes(availableCourse.id)}
+                          onChange={() => togglePrerequisiteCourse(availableCourse.id)}
+                          className="rounded border-gray-300"
+                        />
+                        <label 
+                          htmlFor={`prereq-${availableCourse.id}`}
+                          className="text-sm flex-1 cursor-pointer"
+                        >
+                          {availableCourse.title}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -427,7 +498,7 @@ const CourseBuilder = () => {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Course Lessons</CardTitle>
-                  <Button onClick={addLesson}>
+                  <Button onClick={createNewLesson}>
                     <Plus className="mr-2 h-4 w-4" />
                     Add Lesson
                   </Button>
@@ -439,68 +510,55 @@ const CourseBuilder = () => {
                     <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold mb-2">No lessons yet</h3>
                     <p className="text-gray-600 mb-4">Start building your course by adding lessons</p>
-                    <Button onClick={addLesson}>
+                    <Button onClick={createNewLesson}>
                       <Plus className="mr-2 h-4 w-4" />
                       Add Your First Lesson
                     </Button>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {lessons.map((lesson, index) => (
-                      <Card key={index} className="border-l-4 border-l-blue-600">
+                    {lessons.map((lesson) => (
+                      <Card key={lesson.id} className="border-l-4 border-l-blue-600">
                         <CardContent className="p-4">
-                          <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                              <h4 className="font-medium">Lesson {lesson.order}</h4>
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <h4 className="font-medium">Lesson {lesson.order}: {lesson.title}</h4>
+                                <Badge variant="outline" className="text-xs">
+                                  {lesson.duration} min
+                                </Badge>
+                                {lesson.releaseType === 'scheduled' && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    <Calendar className="h-3 w-3 mr-1" />
+                                    Scheduled
+                                  </Badge>
+                                )}
+                                {lesson.releaseType === 'drip' && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    Drip: Day {lesson.dripDays}
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-600">{lesson.description}</p>
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => editLesson(lesson.id!)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => removeLesson(index)}
+                                onClick={() => deleteLesson(lesson.id!)}
                                 className="text-red-600 hover:text-red-700"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                <Label>Lesson Title</Label>
-                                <Input
-                                  value={lesson.title}
-                                  onChange={(e) => updateLesson(index, 'title', e.target.value)}
-                                  placeholder="Enter lesson title"
-                                />
-                              </div>
-                              
-                              <div>
-                                <Label>Duration (minutes)</Label>
-                                <Input
-                                  type="number"
-                                  value={lesson.duration}
-                                  onChange={(e) => updateLesson(index, 'duration', parseInt(e.target.value))}
-                                  min="1"
-                                />
-                              </div>
-                            </div>
-
-                            <div>
-                              <Label>Description</Label>
-                              <Textarea
-                                value={lesson.description}
-                                onChange={(e) => updateLesson(index, 'description', e.target.value)}
-                                placeholder="Brief description of the lesson"
-                                rows={2}
-                              />
-                            </div>
-
-                            <div>
-                              <Label>Content</Label>
-                              <Textarea
-                                value={lesson.content}
-                                onChange={(e) => updateLesson(index, 'content', e.target.value)}
-                                placeholder="Lesson content (supports HTML)"
-                                rows={6}
-                              />
                             </div>
                           </div>
                         </CardContent>

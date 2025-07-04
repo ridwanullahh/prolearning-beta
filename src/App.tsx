@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,6 +16,7 @@ import LessonPage from "./pages/lesson/LessonPage";
 import MarketplacePage from "./pages/marketplace/MarketplacePage";
 import CourseDetailsPage from "./pages/course/CourseDetailsPage";
 import CourseViewer from "./components/course/CourseViewer";
+import LessonEditor from "./pages/instruct/LessonEditor";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import LoadingScreen from "./components/ui/LoadingScreen";
 import NotFound from "./pages/NotFound";
@@ -95,6 +95,22 @@ const App = () => {
               element={
                 <ProtectedRoute allowedRoles={['instructor']}>
                   <InstructorDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/instruct/courses/:courseId/lessons/new" 
+              element={
+                <ProtectedRoute allowedRoles={['instructor']}>
+                  <LessonEditor />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/instruct/courses/:courseId/lessons/:lessonId/edit" 
+              element={
+                <ProtectedRoute allowedRoles={['instructor']}>
+                  <LessonEditor />
                 </ProtectedRoute>
               } 
             />
