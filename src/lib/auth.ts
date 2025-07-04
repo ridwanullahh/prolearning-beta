@@ -1,4 +1,3 @@
-
 import { db } from './github-sdk';
 
 export interface AuthUser {
@@ -17,18 +16,23 @@ class AuthService {
 
   async login(email: string, password: string): Promise<AuthUser> {
     try {
+      console.log('Attempting login for:', email);
       const token = await db.login(email, password);
       
       if (typeof token !== 'string') {
+        console.error('OTP not supported in this implementation');
         throw new Error('OTP not supported in this implementation');
       }
 
+      console.log('Login successful, getting user data...');
       const user = db.getCurrentUser(token);
       if (!user) {
+        console.error('Failed to get user data after login');
         throw new Error('Failed to get user data');
       }
 
       if (!user.isActive) {
+        console.error('Account is deactivated for user:', email);
         throw new Error('Account is deactivated');
       }
 
@@ -48,8 +52,10 @@ class AuthService {
       localStorage.setItem('auth_user', JSON.stringify(this.currentUser));
       localStorage.setItem('auth_token', token);
       
+      console.log('User authenticated successfully:', this.currentUser.email);
       return this.currentUser;
     } catch (error: any) {
+      console.error('Login error:', error);
       throw new Error(error.message || 'Login failed');
     }
   }

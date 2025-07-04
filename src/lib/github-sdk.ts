@@ -30,7 +30,8 @@ const schemas: Record<string, SchemaDefinition> = {
       subscriptionExpiry: 'date',
       gamificationPoints: 'number',
       level: 'number',
-      badges: 'string'
+      badges: 'string',
+      password: 'string'
     },
     defaults: {
       isActive: true,
@@ -43,6 +44,142 @@ const schemas: Record<string, SchemaDefinition> = {
       badges: '[]',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
+    }
+  },
+  wallets: {
+    required: ['userId', 'balance', 'currency'],
+    types: {
+      id: 'string',
+      uid: 'string',
+      userId: 'string',
+      balance: 'number',
+      currency: 'string',
+      createdAt: 'date',
+      updatedAt: 'date',
+      totalEarnings: 'number',
+      totalWithdrawals: 'number',
+      pendingBalance: 'number'
+    },
+    defaults: {
+      balance: 0,
+      currency: 'USD',
+      totalEarnings: 0,
+      totalWithdrawals: 0,
+      pendingBalance: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  },
+  withdrawals: {
+    required: ['userId', 'amount', 'currency', 'status', 'requestedAt'],
+    types: {
+      id: 'string',
+      uid: 'string',
+      userId: 'string',
+      amount: 'number',
+      currency: 'string',
+      status: 'string',
+      requestedAt: 'date',
+      processedAt: 'date',
+      bankDetails: 'string',
+      adminNotes: 'string',
+      transactionId: 'string'
+    },
+    defaults: {
+      status: 'pending',
+      requestedAt: new Date().toISOString()
+    }
+  },
+  blogPosts: {
+    required: ['title', 'content', 'authorId', 'status'],
+    types: {
+      id: 'string',
+      uid: 'string',
+      title: 'string',
+      content: 'string',
+      excerpt: 'string',
+      authorId: 'string',
+      status: 'string',
+      publishedAt: 'date',
+      createdAt: 'date',
+      updatedAt: 'date',
+      featuredImage: 'string',
+      tags: 'string',
+      category: 'string',
+      slug: 'string',
+      metaTitle: 'string',
+      metaDescription: 'string'
+    },
+    defaults: {
+      status: 'draft',
+      tags: '[]',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  },
+  helpArticles: {
+    required: ['title', 'content', 'category', 'status'],
+    types: {
+      id: 'string',
+      uid: 'string',
+      title: 'string',
+      content: 'string',
+      category: 'string',
+      status: 'string',
+      createdAt: 'date',
+      updatedAt: 'date',
+      authorId: 'string',
+      tags: 'string',
+      order: 'number',
+      slug: 'string'
+    },
+    defaults: {
+      status: 'published',
+      tags: '[]',
+      order: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  },
+  supportTickets: {
+    required: ['userId', 'subject', 'message', 'priority', 'status'],
+    types: {
+      id: 'string',
+      uid: 'string',
+      userId: 'string',
+      subject: 'string',
+      message: 'string',
+      priority: 'string',
+      status: 'string',
+      category: 'string',
+      createdAt: 'date',
+      updatedAt: 'date',
+      assignedTo: 'string',
+      resolvedAt: 'date'
+    },
+    defaults: {
+      priority: 'medium',
+      status: 'open',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  },
+  ticketReplies: {
+    required: ['ticketId', 'userId', 'message'],
+    types: {
+      id: 'string',
+      uid: 'string',
+      ticketId: 'string',
+      userId: 'string',
+      message: 'string',
+      createdAt: 'date',
+      isAdminReply: 'boolean',
+      attachments: 'string'
+    },
+    defaults: {
+      isAdminReply: false,
+      attachments: '[]',
+      createdAt: new Date().toISOString()
     }
   },
   userProfiles: {
@@ -473,30 +610,6 @@ const schemas: Record<string, SchemaDefinition> = {
       createdAt: new Date().toISOString()
     }
   },
-  wallets: {
-    required: ['userId', 'balance', 'currency'],
-    types: {
-      id: 'string',
-      uid: 'string',
-      userId: 'string',
-      balance: 'number',
-      currency: 'string',
-      createdAt: 'date',
-      updatedAt: 'date',
-      totalEarnings: 'number',
-      totalWithdrawals: 'number',
-      pendingBalance: 'number'
-    },
-    defaults: {
-      balance: 0,
-      currency: 'USD',
-      totalEarnings: 0,
-      totalWithdrawals: 0,
-      pendingBalance: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  },
   transactions: {
     required: ['userId', 'amount', 'currency', 'type', 'category', 'description', 'status'],
     types: {
@@ -780,6 +893,15 @@ class GitHubDatabase {
 
   private async _initialize(): Promise<void> {
     try {
+      console.log('Validating GitHub credentials...');
+      console.log('GitHub owner:', config.github.owner);
+      console.log('GitHub repo:', config.github.repo);
+      console.log('GitHub token exists:', !!config.github.token);
+      
+      if (config.github.token === 'your-github-token' || !config.github.token) {
+        throw new Error('Please set VITE_GITHUB_TOKEN in your environment variables');
+      }
+      
       await this.sdk.init();
       
       // Set up schemas
@@ -911,14 +1033,12 @@ class GitHubDatabase {
     }
   }
 
-  // Advanced conflict resolution with exponential backoff and jitter
   private async safeOperation<T>(operation: () => Promise<T>, retries = 5): Promise<T> {
     for (let i = 0; i < retries; i++) {
       try {
         return await operation();
       } catch (error: any) {
         if (error.message.includes('409') && i < retries - 1) {
-          // Exponential backoff with jitter
           const baseDelay = Math.pow(2, i) * 1000;
           const jitter = Math.random() * 1000;
           const delay = baseDelay + jitter;
@@ -933,7 +1053,6 @@ class GitHubDatabase {
     throw new Error('Max retries exceeded for GitHub operation');
   }
 
-  // Wrapper methods for safe operations
   async get<T = any>(collection: string): Promise<T[]> {
     await this.initialize();
     return this.safeOperation(() => this.sdk.get<T>(collection));
@@ -973,7 +1092,6 @@ class GitHubDatabase {
     return this.sdk.queryBuilder<T>(collection);
   }
 
-  // Authentication methods
   async register(email: string, password: string, profile: any = {}): Promise<any> {
     await this.initialize();
     return this.safeOperation(() => this.sdk.register(email, password, profile));

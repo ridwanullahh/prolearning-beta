@@ -1,4 +1,3 @@
-
 import CryptoJS from 'crypto-js';
 
 export interface UniversalSDKConfig {
@@ -33,6 +32,7 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   isActive: boolean;
+  password?: string;
 }
 
 export default class UniversalSDK {
@@ -53,6 +53,20 @@ export default class UniversalSDK {
 
   async init(): Promise<void> {
     try {
+      console.log('Initializing UniversalSDK with config:', {
+        owner: this.config.owner,
+        repo: this.config.repo,
+        hasToken: !!this.config.token
+      });
+      
+      if (!this.config.token || this.config.token === 'your-github-token') {
+        throw new Error('Invalid GitHub token. Please set VITE_GITHUB_TOKEN environment variable.');
+      }
+
+      // Test the GitHub API connection
+      const testResponse = await this.request('/');
+      console.log('GitHub API connection successful:', testResponse.name);
+
       await this.ensureDirectoryExists(this.config.basePath!);
       await this.ensureDirectoryExists(this.config.mediaPath!);
     } catch (error) {
@@ -119,6 +133,8 @@ export default class UniversalSDK {
 
   private async request(endpoint: string, options: RequestInit = {}): Promise<any> {
     const url = `${this.baseUrl}${endpoint}`;
+    console.log('Making GitHub API request to:', url);
+    
     const response = await fetch(url, {
       ...options,
       headers: {
@@ -131,6 +147,12 @@ export default class UniversalSDK {
 
     if (!response.ok) {
       const errorData = await response.text();
+      console.error('GitHub API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        url,
+        error: errorData
+      });
       throw new Error(errorData);
     }
 
@@ -359,13 +381,26 @@ export default class UniversalSDK {
   }
 
   async login(email: string, password: string): Promise<string> {
+    console.log('Attempting login for user:', email);
     const users = await this.get<User>('users');
     const user = users.find(u => u.email === email);
     
-    if (!user || !this.verifyPassword(password, (user as any).password)) {
+    if (!user) {
+      console.error('User not found:', email);
       throw new Error('Invalid credentials');
     }
 
+    if (!user.password) {
+      console.error('User has no password set:', email);
+      throw new Error('Invalid credentials');
+    }
+
+    if (!this.verifyPassword(password, user.password)) {
+      console.error('Password verification failed for user:', email);
+      throw new Error('Invalid credentials');
+    }
+
+    console.log('Login successful for user:', email);
     return this.createSession(user);
   }
 
