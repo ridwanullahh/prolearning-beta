@@ -17,23 +17,33 @@ class AuthService {
 
   async login(email: string, password: string): Promise<AuthUser> {
     try {
+      console.log('[AUTH DEBUG] Starting login process for:', email);
+      
       const token = await db.login(email, password);
+      console.log('[AUTH DEBUG] Login token received:', typeof token);
       
       if (typeof token !== 'string') {
+        console.log('[AUTH DEBUG] OTP required, not supported');
         throw new Error('OTP not supported in this implementation');
       }
 
+      console.log('[AUTH DEBUG] Getting current user with token');
       const user = db.getCurrentUser(token);
+      console.log('[AUTH DEBUG] Current user retrieved:', user ? 'success' : 'failed');
+      
       if (!user) {
+        console.log('[AUTH DEBUG] Failed to get user data');
         throw new Error('Failed to get user data');
       }
 
       if (!user.isActive) {
+        console.log('[AUTH DEBUG] Account is deactivated');
         throw new Error('Account is deactivated');
       }
 
+      console.log('[AUTH DEBUG] Creating auth user object');
       this.currentUser = {
-        id: user.id!,
+        id: user.id || user.uid,
         email: user.email,
         name: user.name,
         role: user.role as 'learner' | 'instructor' | 'super_admin',
@@ -48,8 +58,10 @@ class AuthService {
       localStorage.setItem('auth_user', JSON.stringify(this.currentUser));
       localStorage.setItem('auth_token', token);
       
+      console.log('[AUTH DEBUG] Login successful for user:', this.currentUser.id);
       return this.currentUser;
     } catch (error: any) {
+      console.error('[AUTH DEBUG] Login error:', error.message);
       throw new Error(error.message || 'Login failed');
     }
   }
@@ -62,7 +74,10 @@ class AuthService {
     country?: string;
   }): Promise<AuthUser> {
     try {
+      console.log('[AUTH DEBUG] Starting registration for:', userData.email);
+      
       const currency = this.getCurrencyByCountry(userData.country);
+      console.log('[AUTH DEBUG] Determined currency:', currency);
       
       const user = await db.register(userData.email, userData.password, {
         name: userData.name,
@@ -72,6 +87,8 @@ class AuthService {
         isActive: true,
         profileComplete: false
       });
+
+      console.log('[AUTH DEBUG] User registered with ID:', user.id);
 
       // Create user profile
       await db.insert('userProfiles', {
@@ -117,13 +134,16 @@ class AuthService {
       localStorage.setItem('auth_user', JSON.stringify(this.currentUser));
       localStorage.setItem('auth_token', token);
       
+      console.log('[AUTH DEBUG] Registration successful for user:', this.currentUser.id);
       return this.currentUser;
     } catch (error: any) {
+      console.error('[AUTH DEBUG] Registration error:', error.message);
       throw new Error(error.message || 'Registration failed');
     }
   }
 
   async logout(): Promise<void> {
+    console.log('[AUTH DEBUG] Logging out user');
     if (this.currentToken) {
       db.destroySession(this.currentToken);
     }
@@ -131,6 +151,7 @@ class AuthService {
     this.currentToken = null;
     localStorage.removeItem('auth_user');
     localStorage.removeItem('auth_token');
+    console.log('[AUTH DEBUG] Logout complete');
   }
 
   getCurrentUser(): AuthUser | null {
@@ -148,11 +169,13 @@ class AuthService {
         if (session) {
           this.currentUser = JSON.parse(stored);
           this.currentToken = token;
+          console.log('[AUTH DEBUG] Restored user from localStorage:', this.currentUser.id);
           return this.currentUser;
         }
       } catch {
         localStorage.removeItem('auth_user');
         localStorage.removeItem('auth_token');
+        console.log('[AUTH DEBUG] Invalid stored session, cleared localStorage');
       }
     }
 

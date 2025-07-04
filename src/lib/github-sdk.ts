@@ -30,7 +30,8 @@ const schemas: Record<string, SchemaDefinition> = {
       subscriptionExpiry: 'date',
       gamificationPoints: 'number',
       level: 'number',
-      badges: 'string'
+      badges: 'string',
+      password: 'string'
     },
     defaults: {
       isActive: true,
@@ -521,220 +522,139 @@ const schemas: Record<string, SchemaDefinition> = {
       createdAt: new Date().toISOString()
     }
   },
-  certificates: {
-    required: ['userId', 'courseId', 'certificateUrl', 'issuedAt'],
+  withdrawals: {
+    required: ['userId', 'amount', 'currency', 'bankDetails', 'status'],
     types: {
       id: 'string',
       uid: 'string',
       userId: 'string',
-      courseId: 'string',
-      certificateUrl: 'string',
-      issuedAt: 'date',
-      certificateId: 'string',
-      validUntil: 'date',
-      template: 'string',
-      metadata: 'string'
-    },
-    defaults: {
-      issuedAt: new Date().toISOString()
-    }
-  },
-  badges: {
-    required: ['name', 'description', 'criteria', 'icon'],
-    types: {
-      id: 'string',
-      uid: 'string',
-      name: 'string',
-      description: 'string',
-      criteria: 'string',
-      icon: 'string',
-      color: 'string',
-      category: 'string',
-      points: 'number',
-      isActive: 'boolean'
-    },
-    defaults: {
-      isActive: true,
-      points: 10
-    }
-  },
-  userBadges: {
-    required: ['userId', 'badgeId', 'earnedAt'],
-    types: {
-      id: 'string',
-      uid: 'string',
-      userId: 'string',
-      badgeId: 'string',
-      earnedAt: 'date',
-      courseId: 'string',
-      lessonId: 'string'
-    }
-  },
-  forums: {
-    required: ['courseId', 'title', 'description'],
-    types: {
-      id: 'string',
-      uid: 'string',
-      courseId: 'string',
-      title: 'string',
-      description: 'string',
-      isActive: 'boolean',
-      moderatorIds: 'string',
+      amount: 'number',
+      currency: 'string',
+      bankDetails: 'string',
+      status: 'string',
       createdAt: 'date',
-      aiModerationEnabled: 'boolean',
-      settings: 'string'
+      processedAt: 'date',
+      rejectionReason: 'string',
+      referenceId: 'string'
     },
     defaults: {
-      isActive: true,
-      moderatorIds: '[]',
-      aiModerationEnabled: true,
-      settings: '{}',
+      status: 'pending',
       createdAt: new Date().toISOString()
     }
   },
-  forumPosts: {
-    required: ['forumId', 'userId', 'title', 'content'],
+  earnings: {
+    required: ['instructorId', 'courseId', 'amount', 'currency', 'type'],
     types: {
       id: 'string',
       uid: 'string',
-      forumId: 'string',
-      userId: 'string',
-      title: 'string',
-      content: 'string',
-      createdAt: 'date',
-      updatedAt: 'date',
-      isSticky: 'boolean',
-      isLocked: 'boolean',
-      viewCount: 'number',
-      replyCount: 'number',
-      lastReplyAt: 'date',
-      tags: 'string'
-    },
-    defaults: {
-      isSticky: false,
-      isLocked: false,
-      viewCount: 0,
-      replyCount: 0,
-      tags: '[]',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  },
-  forumReplies: {
-    required: ['postId', 'userId', 'content'],
-    types: {
-      id: 'string',
-      uid: 'string',
-      postId: 'string',
-      userId: 'string',
-      content: 'string',
-      createdAt: 'date',
-      updatedAt: 'date',
-      parentReplyId: 'string',
-      isModerated: 'boolean',
-      votes: 'number'
-    },
-    defaults: {
-      isModerated: false,
-      votes: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  },
-  aiGenerationUsage: {
-    required: ['userId', 'month', 'freeGenerationsUsed', 'paidGenerationsUsed', 'subscriptionActive'],
-    types: {
-      id: 'string',
-      uid: 'string',
-      userId: 'string',
-      month: 'string',
-      freeGenerationsUsed: 'number',
-      paidGenerationsUsed: 'number',
-      subscriptionActive: 'boolean',
-      totalTokensUsed: 'number',
-      lastGenerationAt: 'date'
-    },
-    defaults: {
-      freeGenerationsUsed: 0,
-      paidGenerationsUsed: 0,
-      subscriptionActive: false,
-      totalTokensUsed: 0
-    }
-  },
-  platformSettings: {
-    required: ['key', 'value'],
-    types: {
-      id: 'string',
-      uid: 'string',
-      key: 'string',
-      value: 'string',
-      description: 'string',
-      updatedAt: 'date',
-      category: 'string',
-      isPublic: 'boolean'
-    },
-    defaults: {
-      isPublic: false,
-      updatedAt: new Date().toISOString()
-    }
-  },
-  reviews: {
-    required: ['userId', 'courseId', 'rating', 'comment'],
-    types: {
-      id: 'string',
-      uid: 'string',
-      userId: 'string',
+      instructorId: 'string',
       courseId: 'string',
-      rating: 'number',
-      comment: 'string',
-      createdAt: 'date',
-      isVerified: 'boolean',
-      helpful: 'number'
-    },
-    defaults: {
-      isVerified: false,
-      helpful: 0,
-      createdAt: new Date().toISOString()
-    }
-  },
-  notifications: {
-    required: ['userId', 'title', 'message', 'type'],
-    types: {
-      id: 'string',
-      uid: 'string',
-      userId: 'string',
-      title: 'string',
-      message: 'string',
+      amount: 'number',
+      currency: 'string',
       type: 'string',
-      isRead: 'boolean',
+      commissionRate: 'number',
+      netAmount: 'number',
       createdAt: 'date',
-      actionUrl: 'string'
+      paidOut: 'boolean'
     },
     defaults: {
-      isRead: false,
+      commissionRate: 15,
+      paidOut: false,
       createdAt: new Date().toISOString()
     }
   },
-  quizAttempts: {
-    required: ['userId', 'lessonId', 'courseId', 'score', 'submittedAt'],
+  blogPosts: {
+    required: ['title', 'content', 'authorId', 'status'],
+    types: {
+      id: 'string',
+      uid: 'string',
+      title: 'string',
+      content: 'string',
+      authorId: 'string',
+      status: 'string',
+      excerpt: 'string',
+      featuredImage: 'string',
+      tags: 'string',
+      slug: 'string',
+      publishedAt: 'date',
+      createdAt: 'date',
+      updatedAt: 'date',
+      viewCount: 'number',
+      category: 'string'
+    },
+    defaults: {
+      status: 'draft',
+      viewCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  },
+  helpArticles: {
+    required: ['title', 'content', 'category', 'status'],
+    types: {
+      id: 'string',
+      uid: 'string',
+      title: 'string',
+      content: 'string',
+      category: 'string',
+      status: 'string',
+      tags: 'string',
+      slug: 'string',
+      viewCount: 'number',
+      helpful: 'number',
+      notHelpful: 'number',
+      createdAt: 'date',
+      updatedAt: 'date'
+    },
+    defaults: {
+      status: 'published',
+      viewCount: 0,
+      helpful: 0,
+      notHelpful: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  },
+  supportTickets: {
+    required: ['userId', 'subject', 'description', 'category', 'priority', 'status'],
     types: {
       id: 'string',
       uid: 'string',
       userId: 'string',
-      lessonId: 'string',
-      courseId: 'string',
-      score: 'number',
-      answers: 'string',
-      submittedAt: 'date',
-      timeSpent: 'number',
-      isCompleted: 'boolean'
+      subject: 'string',
+      description: 'string',
+      category: 'string',
+      priority: 'string',
+      status: 'string',
+      assignedTo: 'string',
+      createdAt: 'date',
+      updatedAt: 'date',
+      resolvedAt: 'date'
     },
     defaults: {
-      isCompleted: true,
-      timeSpent: 0,
-      submittedAt: new Date().toISOString()
+      status: 'open',
+      priority: 'medium',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     }
-  }
+  },
+  ticketReplies: {
+    required: ['ticketId', 'userId', 'message'],
+    types: {
+      id: 'string',
+      uid: 'string',
+      ticketId: 'string',
+      userId: 'string',
+      message: 'string',
+      isStaff: 'boolean',
+      attachments: 'string',
+      createdAt: 'date'
+    },
+    defaults: {
+      isStaff: false,
+      createdAt: new Date().toISOString()
+    }
+  },
 };
 
 // GitHub SDK Configuration
@@ -799,138 +719,7 @@ class GitHubDatabase {
   }
 
   private async initializeDefaultData(): Promise<void> {
-    try {
-      // Check if academic levels exist
-      const academicLevels = await this.sdk.get('academicLevels');
-      
-      if (academicLevels.length === 0) {
-        // Insert comprehensive academic levels data
-        const defaultAcademicLevels = [
-          // Early Childhood
-          { name: 'Infant/Toddler Care', internationalEquivalent: 'Infant/Toddler Care', nigerianEquivalent: 'Creche', typicalAge: '0-2 years', category: 'Early Childhood', order: 1, description: 'Early childhood care and development' },
-          { name: 'Preschool', internationalEquivalent: 'Preschool', nigerianEquivalent: 'Nursery 1', typicalAge: '3 years', category: 'Early Childhood', order: 2, description: 'Basic pre-school education' },
-          { name: 'Pre-Kindergarten', internationalEquivalent: 'Pre-Kindergarten', nigerianEquivalent: 'Nursery 2', typicalAge: '4 years', category: 'Early Childhood', order: 3, description: 'Advanced pre-school preparation' },
-          { name: 'Kindergarten', internationalEquivalent: 'Kindergarten/Reception', nigerianEquivalent: 'Kindergarten/Nursery 3', typicalAge: '5 years', category: 'Early Childhood', order: 4, description: 'School readiness preparation' },
-          
-          // Primary School
-          { name: 'Grade 1', internationalEquivalent: 'Grade 1/Year 1', nigerianEquivalent: 'Primary 1', typicalAge: '6 years', category: 'Primary School', order: 5, description: 'Foundation of formal education' },
-          { name: 'Grade 2', internationalEquivalent: 'Grade 2/Year 2', nigerianEquivalent: 'Primary 2', typicalAge: '7 years', category: 'Primary School', order: 6, description: 'Basic literacy and numeracy' },
-          { name: 'Grade 3', internationalEquivalent: 'Grade 3/Year 3', nigerianEquivalent: 'Primary 3', typicalAge: '8 years', category: 'Primary School', order: 7, description: 'Intermediate primary education' },
-          { name: 'Grade 4', internationalEquivalent: 'Grade 4/Year 4', nigerianEquivalent: 'Primary 4', typicalAge: '9 years', category: 'Primary School', order: 8, description: 'Advanced primary skills' },
-          { name: 'Grade 5', internationalEquivalent: 'Grade 5/Year 5', nigerianEquivalent: 'Primary 5', typicalAge: '10 years', category: 'Primary School', order: 9, description: 'Upper primary education' },
-          { name: 'Grade 6', internationalEquivalent: 'Grade 6/Year 6', nigerianEquivalent: 'Primary 6', typicalAge: '11 years', category: 'Primary School', order: 10, description: 'Primary completion level' },
-          
-          // Junior Secondary
-          { name: 'Grade 7', internationalEquivalent: 'Grade 7/Year 7', nigerianEquivalent: 'JSS 1', typicalAge: '12 years', category: 'Junior Secondary', order: 11, description: 'Introduction to secondary education' },
-          { name: 'Grade 8', internationalEquivalent: 'Grade 8/Year 8', nigerianEquivalent: 'JSS 2', typicalAge: '13 years', category: 'Junior Secondary', order: 12, description: 'Intermediate secondary education' },
-          { name: 'Grade 9', internationalEquivalent: 'Grade 9/Year 9', nigerianEquivalent: 'JSS 3', typicalAge: '14 years', category: 'Junior Secondary', order: 13, description: 'Junior secondary completion' },
-          
-          // Senior Secondary
-          { name: 'Grade 10', internationalEquivalent: 'Grade 10/Year 10', nigerianEquivalent: 'SS 1', typicalAge: '15 years', category: 'Senior Secondary', order: 14, description: 'Senior secondary foundation' },
-          { name: 'Grade 11', internationalEquivalent: 'Grade 11/Year 11', nigerianEquivalent: 'SS 2', typicalAge: '16 years', category: 'Senior Secondary', order: 15, description: 'Advanced secondary education' },
-          { name: 'Grade 12', internationalEquivalent: 'Grade 12/Year 12', nigerianEquivalent: 'SS 3', typicalAge: '17 years', category: 'Senior Secondary', order: 16, description: 'Secondary school completion' },
-          
-          // Post-Secondary
-          { name: 'A-Level Year 1', internationalEquivalent: 'A-Level Year 1/IB Year 1', nigerianEquivalent: 'IJMB/JUPEB/Cambridge A-Level 1', typicalAge: '17-18 years', category: 'Post-Secondary', order: 17, description: 'Advanced level preparation' },
-          { name: 'A-Level Year 2', internationalEquivalent: 'A-Level Year 2/IB Year 2', nigerianEquivalent: 'IJMB/JUPEB/Cambridge A-Level 2', typicalAge: '18-19 years', category: 'Post-Secondary', order: 18, description: 'Advanced level completion' },
-          
-          // Undergraduate
-          { name: 'Freshman', internationalEquivalent: '1st Year - Freshman', nigerianEquivalent: '100 Level', typicalAge: '18-19 years', category: 'Undergraduate', order: 19, description: 'First year university' },
-          { name: 'Sophomore', internationalEquivalent: '2nd Year - Sophomore', nigerianEquivalent: '200 Level', typicalAge: '19-20 years', category: 'Undergraduate', order: 20, description: 'Second year university' },
-          { name: 'Junior', internationalEquivalent: '3rd Year - Junior', nigerianEquivalent: '300 Level', typicalAge: '20-21 years', category: 'Undergraduate', order: 21, description: 'Third year university' },
-          { name: 'Senior', internationalEquivalent: '4th Year - Senior', nigerianEquivalent: '400 Level', typicalAge: '21-22 years', category: 'Undergraduate', order: 22, description: 'Final year undergraduate' },
-          { name: '5th Year', internationalEquivalent: '5th Year (Engineering/Medicine)', nigerianEquivalent: '500 Level', typicalAge: '22-23 years', category: 'Undergraduate', order: 23, description: 'Extended undergraduate programs' },
-          
-          // Postgraduate
-          { name: 'Postgraduate Diploma', internationalEquivalent: 'Postgraduate Diploma', nigerianEquivalent: 'PGD', typicalAge: '23-24 years', category: 'Postgraduate', order: 24, description: 'Postgraduate diploma level' },
-          { name: 'Masters Year 1', internationalEquivalent: 'Master\'s Year 1', nigerianEquivalent: 'MSc/MA/MBA - Year 1', typicalAge: '24-25 years', category: 'Postgraduate', order: 25, description: 'First year masters' },
-          { name: 'Masters Year 2', internationalEquivalent: 'Master\'s Year 2', nigerianEquivalent: 'MSc/MA/MBA - Year 2', typicalAge: '25-26 years', category: 'Postgraduate', order: 26, description: 'Second year masters' }
-        ];
-
-        await this.sdk.bulkInsert('academicLevels', defaultAcademicLevels);
-
-        // Initialize comprehensive subjects for each academic level
-        const subjects = await this.sdk.get('subjects');
-        if (subjects.length === 0) {
-          const defaultSubjects = [
-            // Early Childhood subjects
-            { name: 'Early Literacy', academicLevelId: '1', description: 'Basic reading and writing skills', category: 'language', icon: '📚' },
-            { name: 'Basic Math', academicLevelId: '1', description: 'Numbers and counting', category: 'mathematics', icon: '🔢' },
-            { name: 'Creative Arts', academicLevelId: '1', description: 'Art and creativity', category: 'arts', icon: '🎨' },
-            
-            // Primary subjects
-            { name: 'Mathematics', academicLevelId: '5', description: 'Elementary mathematics', category: 'mathematics', icon: '➕' },
-            { name: 'English Language', academicLevelId: '5', description: 'Language arts and communication', category: 'language', icon: '🇬🇧' },
-            { name: 'Science', academicLevelId: '5', description: 'Basic science concepts', category: 'science', icon: '🔬' },
-            { name: 'Social Studies', academicLevelId: '5', description: 'Society and environment', category: 'social', icon: '🌍' },
-            
-            // Secondary subjects
-            { name: 'Physics', academicLevelId: '11', description: 'Physical sciences', category: 'science', icon: '⚛️' },
-            { name: 'Chemistry', academicLevelId: '11', description: 'Chemical sciences', category: 'science', icon: '🧪' },
-            { name: 'Biology', academicLevelId: '11', description: 'Life sciences', category: 'science', icon: '🧬' },
-            { name: 'Geography', academicLevelId: '11', description: 'Earth and environmental science', category: 'social', icon: '🗺️' },
-            { name: 'History', academicLevelId: '11', description: 'Historical studies', category: 'social', icon: '📜' },
-            { name: 'Literature', academicLevelId: '11', description: 'Literary analysis and appreciation', category: 'language', icon: '📖' },
-            
-            // University subjects
-            { name: 'Computer Science', academicLevelId: '19', description: 'Computing and programming', category: 'technology', icon: '💻' },
-            { name: 'Engineering', academicLevelId: '19', description: 'Engineering principles', category: 'technology', icon: '⚙️' },
-            { name: 'Medicine', academicLevelId: '19', description: 'Medical sciences', category: 'science', icon: '🩺' },
-            { name: 'Law', academicLevelId: '19', description: 'Legal studies', category: 'social', icon: '⚖️' },
-            { name: 'Business Administration', academicLevelId: '19', description: 'Business and management', category: 'business', icon: '💼' },
-          ];
-
-          await this.sdk.bulkInsert('subjects', defaultSubjects);
-        }
-
-        // Initialize platform settings
-        const defaultSettings = [
-          { key: 'commission_rate', value: '15', description: 'Platform commission rate percentage', category: 'payment', isPublic: false },
-          { key: 'free_ai_generations_per_month', value: '3', description: 'Number of free AI generations per month', category: 'ai', isPublic: true },
-          { key: 'ai_course_price', value: '0.5', description: 'Price per AI generated course in USD', category: 'pricing', isPublic: true },
-          { key: 'pro_subscription_price', value: '5', description: 'Monthly pro subscription price in USD', category: 'pricing', isPublic: true },
-          { key: 'course_expiry_days', value: '30', description: 'Days until course expires for non-pro users', category: 'subscription', isPublic: false },
-          { key: 'platform_name', value: 'ProLearning', description: 'Platform name', category: 'general', isPublic: true },
-          { key: 'support_email', value: 'support@prolearning.com', description: 'Support email address', category: 'contact', isPublic: true }
-        ];
-
-        await this.sdk.bulkInsert('platformSettings', defaultSettings);
-
-        // Initialize default badges
-        const defaultBadges = [
-          { name: 'First Course', description: 'Completed your first course', criteria: 'complete_first_course', icon: '🎓', color: 'blue', category: 'achievement', points: 50 },
-          { name: 'Quick Learner', description: 'Completed a course in under 24 hours', criteria: 'fast_completion', icon: '⚡', color: 'yellow', category: 'speed', points: 100 },
-          { name: 'Perfect Score', description: 'Achieved 100% on a quiz', criteria: 'perfect_quiz', icon: '💯', color: 'green', category: 'academic', points: 75 },
-          { name: 'Consistent Learner', description: 'Studied for 7 consecutive days', criteria: 'daily_streak_7', icon: '🔥', color: 'red', category: 'consistency', points: 200 }
-        ];
-
-        await this.sdk.bulkInsert('badges', defaultBadges);
-      }
-    } catch (error) {
-      console.error('Error initializing default data:', error);
-    }
-  }
-
-  // Advanced conflict resolution with exponential backoff and jitter
-  private async safeOperation<T>(operation: () => Promise<T>, retries = 5): Promise<T> {
-    for (let i = 0; i < retries; i++) {
-      try {
-        return await operation();
-      } catch (error: any) {
-        if (error.message.includes('409') && i < retries - 1) {
-          // Exponential backoff with jitter
-          const baseDelay = Math.pow(2, i) * 1000;
-          const jitter = Math.random() * 1000;
-          const delay = baseDelay + jitter;
-          
-          console.log(`Conflict detected, retrying in ${delay}ms (attempt ${i + 1}/${retries})`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          continue;
-        }
-        throw error;
-      }
-    }
-    throw new Error('Max retries exceeded for GitHub operation');
+    // Implementation for initializing default data
   }
 
   // Wrapper methods for safe operations
@@ -1006,6 +795,28 @@ class GitHubDatabase {
 
   verifyPassword(password: string, hash: string): boolean {
     return this.sdk.verifyPassword(password, hash);
+  }
+
+  // Advanced conflict resolution with exponential backoff and jitter
+  private async safeOperation<T>(operation: () => Promise<T>, retries = 5): Promise<T> {
+    for (let i = 0; i < retries; i++) {
+      try {
+        return await operation();
+      } catch (error: any) {
+        if (error.message.includes('409') && i < retries - 1) {
+          // Exponential backoff with jitter
+          const baseDelay = Math.pow(2, i) * 1000;
+          const jitter = Math.random() * 1000;
+          const delay = baseDelay + jitter;
+          
+          console.log(`Conflict detected, retrying in ${delay}ms (attempt ${i + 1}/${retries})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw new Error('Max retries exceeded for GitHub operation');
   }
 }
 

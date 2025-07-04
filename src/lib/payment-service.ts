@@ -1,4 +1,3 @@
-
 import { config, CURRENCY_RATES } from './config';
 import { db } from './github-sdk';
 
@@ -8,7 +7,7 @@ export interface PaymentRequest {
   email: string;
   userId: string;
   courseId?: string;
-  type: 'course_purchase' | 'subscription' | 'ai_generation';
+  type: 'course_purchase' | 'subscription' | 'ai_generation' | 'wallet_funding';
   description: string;
 }
 
@@ -112,6 +111,7 @@ class PaymentService {
     switch (metadata.type) {
       case 'course_purchase':
         await this.enrollUserInCourse(metadata.userId, metadata.courseId);
+        await this.processInstructorEarning(metadata.courseId, paymentData.amount / 100);
         break;
       case 'subscription':
         await this.activateSubscription(metadata.userId);
@@ -119,10 +119,88 @@ class PaymentService {
       case 'ai_generation':
         await this.addAIGenerationCredits(metadata.userId);
         break;
+      case 'wallet_funding':
+        await this.addToWallet(metadata.userId, paymentData.amount / 100, paymentData.currency);
+        break;
     }
 
     // Update user wallet
     await this.updateUserWallet(metadata.userId, paymentData);
+  }
+
+  private async addToWallet(userId: string, amount: number, currency: string): Promise<void> {
+    try {
+      let wallets = await db.queryBuilder('wallets')
+        .where(item => item.userId === userId)
+        .exec();
+
+      if (wallets.length === 0) {
+        // Create wallet if it doesn't exist
+        await db.insert('wallets', {
+          userId,
+          balance: amount,
+          currency,
+          totalEarnings: 0,
+          totalWithdrawals: 0,
+          pendingBalance: 0
+        });
+      } else {
+        // Update existing wallet balance
+        const wallet = wallets[0];
+        await db.update('wallets', wallet.id, {
+          balance: (wallet.balance || 0) + amount,
+          updatedAt: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error('Error adding to wallet:', error);
+    }
+  }
+
+  private async processInstructorEarning(courseId: string, amount: number): Promise<void> {
+    try {
+      const course = await db.getItem('courses', courseId);
+      if (!course) return;
+
+      const commissionRate = 15; // Platform commission
+      const instructorShare = amount * (100 - commissionRate) / 100;
+
+      // Record earning
+      await db.insert('earnings', {
+        instructorId: course.creatorId,
+        courseId,
+        amount: instructorShare,
+        currency: course.currency || 'USD',
+        type: 'course_sale',
+        commissionRate,
+        netAmount: instructorShare
+      });
+
+      // Update instructor wallet
+      let wallets = await db.queryBuilder('wallets')
+        .where(item => item.userId === course.creatorId)
+        .exec();
+
+      if (wallets.length === 0) {
+        await db.insert('wallets', {
+          userId: course.creatorId,
+          balance: instructorShare,
+          currency: course.currency || 'USD',
+          totalEarnings: instructorShare,
+          totalWithdrawals: 0,
+          pendingBalance: 0
+        });
+      } else {
+        const wallet = wallets[0];
+        await db.update('wallets', wallet.id, {
+          balance: (wallet.balance || 0) + instructorShare,
+          totalEarnings: (wallet.totalEarnings || 0) + instructorShare,
+          updatedAt: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error('Error processing instructor earning:', error);
+    }
   }
 
   private async enrollUserInCourse(userId: string, courseId: string): Promise<void> {
