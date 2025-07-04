@@ -1,538 +1,401 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+import { Progress } from '@/components/ui/progress';
+import { 
+  Play, 
+  Pause, 
+  CheckCircle, 
+  ArrowLeft, 
+  ArrowRight,
+  BookOpen,
+  Brain,
+  Lightbulb,
+  HelpCircle,
+  Download,
+  FileText,
+  Video,
+  Image as ImageIcon,
+  Volume2
+} from 'lucide-react';
 import { db } from '@/lib/github-sdk';
 import { authService } from '@/lib/auth';
-import { ChevronLeft, ChevronRight, BookOpen, Brain, Key, Map, CheckCircle, XCircle, RotateCcw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
-interface LessonViewerProps {
+interface EnhancedLessonViewerProps {
   lessonId: string;
   courseId: string;
+  onComplete?: () => void | Promise<void>;
   onNext?: () => void;
   onPrevious?: () => void;
+  hasNext?: boolean;
+  hasPrevious?: boolean;
 }
 
-interface ContentBlock {
-  id: string;
-  type: 'text' | 'video' | 'image' | 'audio' | 'document';
-  title: string;
-  content: string;
-  order: number;
-  metadata: any;
-}
-
-interface Quiz {
-  id: string;
-  question: string;
-  type: 'multiple_choice' | 'true_false' | 'fill_in_blank' | 'short_answer' | 'essay';
-  options?: string[];
-  correctAnswer: string;
-  explanation: string;
-  points: number;
-}
-
-interface Flashcard {
-  id: string;
-  front: string;
-  back: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  hint?: string;
-}
-
-interface KeyPoint {
-  id: string;
-  point: string;
-  explanation: string;
-  importance: 'low' | 'medium' | 'high';
-  examples: string[];
-}
-
-interface MindMapNode {
-  id: string;
-  label: string;
-  x: number;
-  y: number;
-  children: string[];
-}
-
-const EnhancedLessonViewer = ({ lessonId, courseId, onNext, onPrevious }: LessonViewerProps) => {
+const EnhancedLessonViewer = ({
+  lessonId,
+  courseId,
+  onComplete,
+  onNext,
+  onPrevious,
+  hasNext = false,
+  hasPrevious = false
+}: EnhancedLessonViewerProps) => {
   const [lesson, setLesson] = useState<any>(null);
-  const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([]);
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
-  const [keyPoints, setKeyPoints] = useState<KeyPoint[]>([]);
-  const [mindMap, setMindMap] = useState<{ title: string; nodes: MindMapNode[] }>({ title: '', nodes: [] });
-  const [loading, setLoading] = useState(true);
-  const [currentView, setCurrentView] = useState<'content' | 'quiz' | 'flashcards' | 'keypoints' | 'mindmap'>('content');
-  
-  // Quiz state
+  const [contents, setContents] = useState<any[]>([]);
+  const [quizzes, setQuizzes] = useState<any[]>([]);
+  const [flashcards, setFlashcards] = useState<any[]>([]);
+  const [keyPoints, setKeyPoints] = useState<any[]>([]);
+  const [mindMaps, setMindMaps] = useState<any[]>([]);
+  const [currentQuiz, setCurrentQuiz] = useState<any>(null);
   const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({});
-  const [quizSubmitted, setQuizSubmitted] = useState(false);
-  const [quizScore, setQuizScore] = useState(0);
-  
-  // Flashcard state
+  const [quizScore, setQuizScore] = useState<number | null>(null);
   const [currentFlashcard, setCurrentFlashcard] = useState(0);
-  const [showFlashcardBack, setShowFlashcardBack] = useState(false);
-
-  const { toast } = useToast();
+  const [showFlashcardAnswer, setShowFlashcardAnswer] = useState(false);
+  const [lessonCompleted, setLessonCompleted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [canAccess, setCanAccess] = useState(false);
+  const user = authService.getCurrentUser();
 
   useEffect(() => {
-    loadLessonData();
+    if (lessonId) {
+      loadLesson();
+    }
   }, [lessonId]);
 
-  const loadLessonData = async () => {
+  const loadLesson = async () => {
     try {
-      const user = authService.getCurrentUser();
-      if (!user) return;
+      setLoading(true);
+      const [lessonData, contentsData, quizzesData, flashcardsData, keyPointsData, mindMapsData] = await Promise.all([
+        db.getItem('lessons', lessonId),
+        db.queryBuilder('lessonContents')
+          .where((c: any) => c.lessonId === lessonId)
+          .orderBy('order', 'asc')
+          .exec(),
+        db.queryBuilder('quizzes').where((q: any) => q.lessonId === lessonId).exec(),
+        db.queryBuilder('flashcards').where((f: any) => f.lessonId === lessonId).exec(),
+        db.queryBuilder('keyPoints').where((k: any) => k.lessonId === lessonId).exec(),
+        db.queryBuilder('mindMaps').where((m: any) => m.lessonId === lessonId).exec()
+      ]);
 
-      // Load lesson
-      const lessonData = await db.getItem('lessons', lessonId);
-      if (!lessonData) {
-        toast({
-          title: "Error",
-          description: "Lesson not found",
-          variant: "destructive"
-        });
-        return;
-      }
+      if (lessonData) {
+        setLesson(lessonData);
+        setContents(contentsData);
+        setQuizzes(quizzesData);
+        setFlashcards(flashcardsData);
+        setKeyPoints(keyPointsData);
+        setMindMaps(mindMapsData);
 
-      // Check if lesson is accessible (drip content logic)
-      const enrollment = await db.queryBuilder('enrollments')
-        .where(e => e.userId === user.id && e.courseId === courseId)
-        .first();
-
-      if (!enrollment) {
-        toast({
-          title: "Access Denied",
-          description: "You are not enrolled in this course",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Check drip content restrictions
-      if (lessonData.releaseType === 'scheduled' && lessonData.scheduledReleaseDate) {
-        const releaseDate = new Date(lessonData.scheduledReleaseDate);
-        if (new Date() < releaseDate) {
-          toast({
-            title: "Lesson Not Available",
-            description: `This lesson will be available on ${releaseDate.toLocaleDateString()}`,
-            variant: "destructive"
-          });
-          return;
+        if (quizzesData.length > 0) {
+          setCurrentQuiz(quizzesData[0]);
         }
+
+        // Check if lesson can be accessed based on release settings
+        const now = new Date();
+        const canAccessLesson = lessonData.releaseType === 'immediate' || 
+          (lessonData.releaseType === 'scheduled' && new Date(lessonData.scheduledDate) <= now) ||
+          (lessonData.releaseType === 'drip' && await checkDripAccess(lessonData));
+        
+        setCanAccess(canAccessLesson);
       }
-
-      if (lessonData.releaseType === 'drip' && lessonData.dripDays > 0) {
-        const enrollmentDate = new Date(enrollment.enrolledAt);
-        const availableDate = new Date(enrollmentDate.getTime() + (lessonData.dripDays * 24 * 60 * 60 * 1000));
-        if (new Date() < availableDate) {
-          toast({
-            title: "Lesson Not Available",
-            description: `This lesson will be available on ${availableDate.toLocaleDateString()}`,
-            variant: "destructive"
-          });
-          return;
-        }
-      }
-
-      setLesson(lessonData);
-
-      // Load content blocks
-      const contents = await db.queryBuilder('lessonContents')
-        .where(c => c.lessonId === lessonId)
-        .orderBy('order')
-        .exec();
-      
-      setContentBlocks(contents.map(c => ({
-        id: c.id,
-        type: c.type,
-        title: c.title,
-        content: c.content,
-        order: c.order,
-        metadata: JSON.parse(c.metadata || '{}')
-      })));
-
-      // Load quizzes
-      const quizData = await db.queryBuilder('quizzes')
-        .where(q => q.lessonId === lessonId)
-        .exec();
-      
-      if (quizData.length > 0) {
-        const questions = JSON.parse(quizData[0].questions || '[]');
-        setQuizzes(questions.map((q: any, i: number) => ({
-          id: `q${i}`,
-          ...q
-        })));
-      }
-
-      // Load flashcards
-      const flashcardData = await db.queryBuilder('flashcards')
-        .where(f => f.lessonId === lessonId)
-        .orderBy('order')
-        .exec();
-      
-      setFlashcards(flashcardData.map(f => ({
-        id: f.id,
-        front: f.front,
-        back: f.back,
-        difficulty: f.difficulty,
-        hint: f.hint
-      })));
-
-      // Load key points
-      const keyPointData = await db.queryBuilder('keyPoints')
-        .where(k => k.lessonId === lessonId)
-        .orderBy('order')
-        .exec();
-      
-      setKeyPoints(keyPointData.map(k => ({
-        id: k.id,
-        point: k.point,
-        explanation: k.explanation,
-        importance: k.importance,
-        examples: k.examples ? k.examples.split('\n') : []
-      })));
-
-      // Load mind map
-      const mindMapData = await db.queryBuilder('mindMaps')
-        .where(m => m.lessonId === lessonId)
-        .exec();
-      
-      if (mindMapData.length > 0) {
-        setMindMap({
-          title: mindMapData[0].title,
-          nodes: JSON.parse(mindMapData[0].data || '[]')
-        });
-      }
-
     } catch (error) {
-      console.error('Error loading lesson data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load lesson data",
-        variant: "destructive"
-      });
+      console.error('Error loading lesson:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleQuizSubmit = () => {
-    let correctAnswers = 0;
-    quizzes.forEach(quiz => {
-      const userAnswer = quizAnswers[quiz.id];
-      if (userAnswer && userAnswer.toLowerCase().trim() === quiz.correctAnswer.toLowerCase().trim()) {
-        correctAnswers++;
+  const checkDripAccess = async (lessonData: any) => {
+    if (!user || !lessonData.dripDays) return false;
+    
+    try {
+      const enrollment = await db.queryBuilder('enrollments')
+        .where((e: any) => e.userId === user.id && e.courseId === courseId)
+        .exec();
+      
+      if (enrollment.length === 0) return false;
+      
+      const enrollmentDate = new Date(enrollment[0].enrolledAt);
+      const daysElapsed = Math.floor((Date.now() - enrollmentDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      return daysElapsed >= lessonData.dripDays;
+    } catch (error) {
+      console.error('Error checking drip access:', error);
+      return false;
+    }
+  };
+
+  const handleQuizAnswer = (questionId: string, answer: string) => {
+    setQuizAnswers(prev => ({
+      ...prev,
+      [questionId]: answer
+    }));
+  };
+
+  const submitQuiz = () => {
+    if (!currentQuiz) return;
+
+    const questions = JSON.parse(currentQuiz.questions || '[]');
+    let correct = 0;
+    
+    questions.forEach((question: any) => {
+      if (quizAnswers[question.id] === question.correctAnswer) {
+        correct++;
       }
     });
 
-    const score = Math.round((correctAnswers / quizzes.length) * 100);
+    const score = (correct / questions.length) * 100;
     setQuizScore(score);
-    setQuizSubmitted(true);
 
-    // Save quiz attempt
-    const user = authService.getCurrentUser();
-    if (user) {
-      db.insert('quizAttempts', {
-        userId: user.id,
-        lessonId,
-        courseId,
-        score,
-        answers: JSON.stringify(quizAnswers),
-        submittedAt: new Date().toISOString()
-      });
+    if (score >= (currentQuiz.passingScore || 70)) {
+      setLessonCompleted(true);
     }
-
-    toast({
-      title: "Quiz Submitted",
-      description: `You scored ${score}% (${correctAnswers}/${quizzes.length} correct)`,
-      variant: score >= 70 ? "default" : "destructive"
-    });
-  };
-
-  const resetQuiz = () => {
-    setQuizAnswers({});
-    setQuizSubmitted(false);
-    setQuizScore(0);
   };
 
   const nextFlashcard = () => {
-    setCurrentFlashcard((prev) => (prev + 1) % flashcards.length);
-    setShowFlashcardBack(false);
+    if (currentFlashcard < flashcards.length - 1) {
+      setCurrentFlashcard(currentFlashcard + 1);
+      setShowFlashcardAnswer(false);
+    }
   };
 
   const previousFlashcard = () => {
-    setCurrentFlashcard((prev) => (prev - 1 + flashcards.length) % flashcards.length);
-    setShowFlashcardBack(false);
+    if (currentFlashcard > 0) {
+      setCurrentFlashcard(currentFlashcard - 1);
+      setShowFlashcardAnswer(false);
+    }
   };
 
-  const renderContentBlock = (block: ContentBlock) => {
-    switch (block.type) {
+  const completeLesson = async () => {
+    setLessonCompleted(true);
+    if (onComplete) {
+      await onComplete();
+    }
+  };
+
+  const renderContent = (content: any) => {
+    switch (content.type) {
       case 'text':
         return (
           <div className="prose max-w-none">
-            <ReactMarkdown>{block.content}</ReactMarkdown>
+            <ReactMarkdown>{content.content}</ReactMarkdown>
           </div>
         );
-
       case 'video':
         return (
-          <div>
-            {block.metadata?.url && (
-              <div className="aspect-video bg-gray-100 rounded-lg mb-4">
-                {block.metadata.url.includes('youtube.com') || block.metadata.url.includes('youtu.be') ? (
-                  <iframe
-                    src={block.metadata.url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
-                    className="w-full h-full rounded-lg"
-                    allowFullScreen
-                  />
-                ) : (
-                  <video src={block.metadata.url} controls className="w-full h-full rounded-lg" />
-                )}
+          <div className="space-y-2">
+            {content.mediaUrl.includes('youtube.com') || content.mediaUrl.includes('vimeo.com') ? (
+              <div className="aspect-video">
+                <iframe
+                  src={content.mediaUrl}
+                  className="w-full h-full rounded-lg"
+                  allowFullScreen
+                />
               </div>
+            ) : (
+              <video controls className="w-full rounded-lg">
+                <source src={content.mediaUrl} />
+                Your browser does not support the video tag.
+              </video>
             )}
-            {block.content && (
-              <div className="text-gray-600">
-                <ReactMarkdown>{block.content}</ReactMarkdown>
-              </div>
+            {content.description && (
+              <p className="text-gray-600 text-sm">{content.description}</p>
             )}
           </div>
         );
-
       case 'image':
         return (
-          <div>
-            {block.metadata?.url && (
-              <img
-                src={block.metadata.url}
-                alt={block.metadata?.altText || block.title}
-                className="w-full rounded-lg mb-4"
-              />
-            )}
-            {block.metadata?.altText && (
-              <p className="text-sm text-gray-600 italic">{block.metadata.altText}</p>
+          <div className="space-y-2">
+            <img
+              src={content.imageUrl}
+              alt={content.altText || content.title}
+              className="w-full rounded-lg"
+            />
+            {content.altText && (
+              <p className="text-gray-600 text-sm">{content.altText}</p>
             )}
           </div>
         );
-
       case 'audio':
         return (
-          <div>
-            {block.metadata?.url && (
-              <audio src={block.metadata.url} controls className="w-full mb-4" />
-            )}
-            {block.content && (
-              <div className="text-gray-600">
-                <ReactMarkdown>{block.content}</ReactMarkdown>
-              </div>
+          <div className="space-y-2">
+            <audio controls className="w-full">
+              <source src={content.mediaUrl} />
+              Your browser does not support the audio tag.
+            </audio>
+            {content.description && (
+              <p className="text-gray-600 text-sm">{content.description}</p>
             )}
           </div>
         );
-
       case 'document':
         return (
-          <div className="border rounded-lg p-4">
-            <div className="flex items-center space-x-2 mb-2">
-              <BookOpen className="h-5 w-5 text-blue-600" />
-              <span className="font-medium">{block.title}</span>
-            </div>
-            {block.content && (
-              <p className="text-gray-600 mb-4">{block.content}</p>
-            )}
-            {block.metadata?.url && (
-              <Button variant="outline" asChild>
-                <a href={block.metadata.url} target="_blank" rel="noopener noreferrer">
-                  Download Document
+          <div className="border rounded-lg p-4 bg-gray-50">
+            <div className="flex items-center gap-3">
+              <FileText className="h-8 w-8 text-blue-600" />
+              <div className="flex-1">
+                <h4 className="font-medium">{content.title}</h4>
+                {content.description && (
+                  <p className="text-sm text-gray-600">{content.description}</p>
+                )}
+              </div>
+              <Button variant="outline" size="sm" asChild>
+                <a href={content.fileUrl} target="_blank" rel="noopener noreferrer">
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
                 </a>
               </Button>
-            )}
+            </div>
           </div>
         );
-
       default:
-        return null;
+        return <p>Unsupported content type: {content.type}</p>;
     }
   };
 
-  const renderQuiz = () => {
-    if (quizzes.length === 0) {
-      return (
-        <div className="text-center py-8 text-gray-500">
-          <Brain className="mx-auto h-12 w-12 mb-4" />
-          <p>No quiz available for this lesson.</p>
-        </div>
-      );
-    }
+  const renderQuizContent = () => {
+    if (!currentQuiz) return <p>No quiz available for this lesson.</p>;
+
+    const questions = JSON.parse(currentQuiz.questions || '[]');
 
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold">Lesson Quiz</h3>
-          {quizSubmitted && (
-            <div className="flex items-center space-x-4">
-              <Badge variant={quizScore >= 70 ? "default" : "destructive"}>
-                Score: {quizScore}%
-              </Badge>
-              <Button size="sm" onClick={resetQuiz}>
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Retake
-              </Button>
-            </div>
-          )}
+          <h3 className="text-lg font-semibold">{currentQuiz.title}</h3>
+          <Badge>Passing Score: {currentQuiz.passingScore || 70}%</Badge>
         </div>
 
-        {quizzes.map((quiz, index) => (
-          <Card key={quiz.id}>
-            <CardHeader>
-              <CardTitle className="text-lg">
-                Question {index + 1}
-                {quizSubmitted && (
-                  <span className="ml-2">
-                    {quizAnswers[quiz.id]?.toLowerCase().trim() === quiz.correctAnswer.toLowerCase().trim() ? (
-                      <CheckCircle className="inline h-5 w-5 text-green-600" />
-                    ) : (
-                      <XCircle className="inline h-5 w-5 text-red-600" />
+        {quizScore === null ? (
+          <div className="space-y-4">
+            {questions.map((question: any, index: number) => (
+              <Card key={question.id || index}>
+                <CardContent className="p-4">
+                  <h4 className="font-medium mb-3">
+                    {index + 1}. {question.question}
+                  </h4>
+                  <div className="space-y-2">
+                    {question.type === 'multiple_choice' && question.options?.map((option: string, optIndex: number) => (
+                      <label key={optIndex} className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name={question.id || `question_${index}`}
+                          value={option}
+                          onChange={(e) => handleQuizAnswer(question.id || `question_${index}`, e.target.value)}
+                          className="w-4 h-4"
+                        />
+                        <span>{option}</span>
+                      </label>
+                    ))}
+                    {question.type === 'fill_in_blank' && (
+                      <input
+                        type="text"
+                        placeholder="Enter your answer..."
+                        onChange={(e) => handleQuizAnswer(question.id || `question_${index}`, e.target.value)}
+                        className="w-full p-2 border rounded-md"
+                      />
                     )}
-                  </span>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-gray-800">{quiz.question}</p>
-
-              {quiz.type === 'multiple_choice' && (
-                <RadioGroup
-                  value={quizAnswers[quiz.id] || ''}
-                  onValueChange={(value) => setQuizAnswers(prev => ({ ...prev, [quiz.id]: value }))}
-                  disabled={quizSubmitted}
-                >
-                  {quiz.options?.map((option, optionIndex) => (
-                    <div key={optionIndex} className="flex items-center space-x-2">
-                      <RadioGroupItem value={option} id={`${quiz.id}-${optionIndex}`} />
-                      <Label htmlFor={`${quiz.id}-${optionIndex}`}>{option}</Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-              )}
-
-              {quiz.type === 'true_false' && (
-                <RadioGroup
-                  value={quizAnswers[quiz.id] || ''}
-                  onValueChange={(value) => setQuizAnswers(prev => ({ ...prev, [quiz.id]: value }))}
-                  disabled={quizSubmitted}
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="True" id={`${quiz.id}-true`} />
-                    <Label htmlFor={`${quiz.id}-true`}>True</Label>
+                    {question.type === 'short_answer' && (
+                      <textarea
+                        placeholder="Enter your answer..."
+                        onChange={(e) => handleQuizAnswer(question.id || `question_${index}`, e.target.value)}
+                        className="w-full p-2 border rounded-md h-20"
+                      />
+                    )}
+                    {question.type === 'essay' && (
+                      <textarea
+                        placeholder="Enter your essay..."
+                        onChange={(e) => handleQuizAnswer(question.id || `question_${index}`, e.target.value)}
+                        className="w-full p-2 border rounded-md h-32"
+                      />
+                    )}
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="False" id={`${quiz.id}-false`} />
-                    <Label htmlFor={`${quiz.id}-false`}>False</Label>
-                  </div>
-                </RadioGroup>
-              )}
-
-              {(quiz.type === 'fill_in_blank' || quiz.type === 'short_answer') && (
-                <Input
-                  value={quizAnswers[quiz.id] || ''}
-                  onChange={(e) => setQuizAnswers(prev => ({ ...prev, [quiz.id]: e.target.value }))}
-                  placeholder="Enter your answer"
-                  disabled={quizSubmitted}
-                />
-              )}
-
-              {quiz.type === 'essay' && (
-                <Textarea
-                  value={quizAnswers[quiz.id] || ''}
-                  onChange={(e) => setQuizAnswers(prev => ({ ...prev, [quiz.id]: e.target.value }))}
-                  placeholder="Enter your essay response"
-                  rows={5}
-                  disabled={quizSubmitted}
-                />
-              )}
-
-              {quizSubmitted && quiz.explanation && (
-                <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                  <p className="font-medium text-blue-900">Explanation:</p>
-                  <p className="text-blue-800">{quiz.explanation}</p>
-                  <p className="text-sm text-blue-700 mt-2">
-                    <strong>Correct Answer:</strong> {quiz.correctAnswer}
-                  </p>
-                </div>
+                </CardContent>
+              </Card>
+            ))}
+            <Button onClick={submitQuiz} className="w-full">
+              Submit Quiz
+            </Button>
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="p-6 text-center">
+              <div className={`text-4xl font-bold mb-2 ${quizScore >= (currentQuiz.passingScore || 70) ? 'text-green-600' : 'text-red-600'}`}>
+                {quizScore.toFixed(0)}%
+              </div>
+              <p className="text-lg mb-4">
+                {quizScore >= (currentQuiz.passingScore || 70) ? 'Congratulations! You passed!' : 'You need to retake the quiz.'}
+              </p>
+              {quizScore >= (currentQuiz.passingScore || 70) && !lessonCompleted && (
+                <Button onClick={completeLesson}>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Complete Lesson
+                </Button>
               )}
             </CardContent>
           </Card>
-        ))}
-
-        {!quizSubmitted && (
-          <Button onClick={handleQuizSubmit} className="w-full">
-            Submit Quiz
-          </Button>
         )}
       </div>
     );
   };
 
   const renderFlashcards = () => {
-    if (flashcards.length === 0) {
-      return (
-        <div className="text-center py-8 text-gray-500">
-          <Brain className="mx-auto h-12 w-12 mb-4" />
-          <p>No flashcards available for this lesson.</p>
-        </div>
-      );
-    }
+    if (flashcards.length === 0) return <p>No flashcards available for this lesson.</p>;
 
-    const currentCard = flashcards[currentFlashcard];
+    const card = flashcards[currentFlashcard];
 
     return (
-      <div className="max-w-md mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-semibold">Flashcards</h3>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
           <span className="text-sm text-gray-600">
             {currentFlashcard + 1} of {flashcards.length}
           </span>
+          <Badge variant="outline">{card.difficulty || 'medium'}</Badge>
         </div>
 
-        <Card className="min-h-[300px] cursor-pointer" onClick={() => setShowFlashcardBack(!showFlashcardBack)}>
-          <CardContent className="flex items-center justify-center h-full p-8">
-            <div className="text-center">
-              <div className="text-sm text-gray-500 mb-4">
-                {showFlashcardBack ? 'Back' : 'Front'} - Click to flip
-              </div>
-              <div className="text-lg">
-                {showFlashcardBack ? currentCard.back : currentCard.front}
-              </div>
-              {!showFlashcardBack && currentCard.hint && (
-                <div className="mt-4 text-sm text-gray-600 italic">
-                  Hint: {currentCard.hint}
-                </div>
+        <Card className="min-h-[200px] cursor-pointer" onClick={() => setShowFlashcardAnswer(!showFlashcardAnswer)}>
+          <CardContent className="p-8 flex items-center justify-center text-center">
+            <div>
+              <h3 className="text-xl font-semibold mb-4">
+                {showFlashcardAnswer ? 'Answer' : 'Question'}
+              </h3>
+              <p className="text-lg">
+                {showFlashcardAnswer ? card.back : card.front}
+              </p>
+              {card.hint && !showFlashcardAnswer && (
+                <p className="text-sm text-gray-500 mt-2">
+                  Hint: {card.hint}
+                </p>
               )}
-              <Badge variant="outline" className="mt-4">
-                {currentCard.difficulty}
-              </Badge>
             </div>
           </CardContent>
         </Card>
 
-        <div className="flex justify-between mt-4">
-          <Button variant="outline" onClick={previousFlashcard} disabled={flashcards.length <= 1}>
-            <ChevronLeft className="h-4 w-4 mr-2" />
+        <div className="flex justify-between">
+          <Button
+            variant="outline"
+            onClick={previousFlashcard}
+            disabled={currentFlashcard === 0}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
             Previous
           </Button>
-          <Button variant="outline" onClick={nextFlashcard} disabled={flashcards.length <= 1}>
+
+          <Button
+            variant="outline"
+            onClick={() => setShowFlashcardAnswer(!showFlashcardAnswer)}
+          >
+            {showFlashcardAnswer ? 'Show Question' : 'Show Answer'}
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={nextFlashcard}
+            disabled={currentFlashcard === flashcards.length - 1}
+          >
             Next
-            <ChevronRight className="h-4 w-4 ml-2" />
+            <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -540,41 +403,33 @@ const EnhancedLessonViewer = ({ lessonId, courseId, onNext, onPrevious }: Lesson
   };
 
   const renderKeyPoints = () => {
-    if (keyPoints.length === 0) {
-      return (
-        <div className="text-center py-8 text-gray-500">
-          <Key className="mx-auto h-12 w-12 mb-4" />
-          <p>No key points available for this lesson.</p>
-        </div>
-      );
-    }
+    if (keyPoints.length === 0) return <p>No key points available for this lesson.</p>;
 
     return (
       <div className="space-y-4">
-        <h3 className="text-xl font-semibold">Key Points</h3>
-        {keyPoints.map((keyPoint, index) => (
-          <Card key={keyPoint.id}>
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-2">
-                <h4 className="font-medium text-lg">{keyPoint.point}</h4>
-                <Badge variant={
-                  keyPoint.importance === 'high' ? 'destructive' : 
-                  keyPoint.importance === 'medium' ? 'default' : 'secondary'
-                }>
-                  {keyPoint.importance}
-                </Badge>
-              </div>
-              <p className="text-gray-600 mb-4">{keyPoint.explanation}</p>
-              {keyPoint.examples.length > 0 && (
-                <div>
-                  <h5 className="font-medium mb-2">Examples:</h5>
-                  <ul className="list-disc list-inside space-y-1">
-                    {keyPoint.examples.map((example, idx) => (
-                      <li key={idx} className="text-gray-600">{example}</li>
-                    ))}
-                  </ul>
+        {keyPoints.map((point, index) => (
+          <Card key={point.id || index}>
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <span className="text-sm font-semibold text-blue-600">{index + 1}</span>
                 </div>
-              )}
+                <div className="flex-1">
+                  <h4 className="font-medium mb-2">{point.point}</h4>
+                  {point.explanation && (
+                    <p className="text-gray-600 text-sm">{point.explanation}</p>
+                  )}
+                  {point.examples && (
+                    <div className="mt-2">
+                      <p className="text-xs font-medium text-gray-500 mb-1">Examples:</p>
+                      <p className="text-sm text-gray-600">{point.examples}</p>
+                    </div>
+                  )}
+                  <Badge variant="outline" className="mt-2">
+                    {point.importance || 'medium'}
+                  </Badge>
+                </div>
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -583,32 +438,33 @@ const EnhancedLessonViewer = ({ lessonId, courseId, onNext, onPrevious }: Lesson
   };
 
   const renderMindMap = () => {
-    if (mindMap.nodes.length === 0) {
-      return (
-        <div className="text-center py-8 text-gray-500">
-          <Map className="mx-auto h-12 w-12 mb-4" />
-          <p>No mind map available for this lesson.</p>
-        </div>
-      );
-    }
+    if (mindMaps.length === 0) return <p>No mind map available for this lesson.</p>;
+
+    const mindMap = mindMaps[0];
+    const nodes = JSON.parse(mindMap.nodes || '[]');
 
     return (
       <div className="space-y-4">
-        <h3 className="text-xl font-semibold">{mindMap.title}</h3>
-        <div className="border rounded-lg p-8" style={{ minHeight: '400px', position: 'relative' }}>
-          {mindMap.nodes.map((node) => (
-            <div
-              key={node.id}
-              className="absolute bg-blue-100 border border-blue-300 rounded-lg p-2 text-sm"
-              style={{
-                left: `${node.x}px`,
-                top: `${node.y}px`,
-                transform: 'translate(-50%, -50%)'
-              }}
-            >
-              {node.label}
-            </div>
-          ))}
+        <h3 className="text-lg font-semibold">{mindMap.title}</h3>
+        <div className="bg-white border rounded-lg p-6">
+          <div className="flex flex-col items-center space-y-4">
+            {nodes.map((node: any, index: number) => (
+              <div key={node.id || index} className="text-center">
+                <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg font-medium">
+                  {node.label}
+                </div>
+                {node.children && (
+                  <div className="flex flex-wrap justify-center gap-2 mt-2">
+                    {node.children.map((child: string, childIndex: number) => (
+                      <div key={childIndex} className="bg-gray-100 text-gray-700 px-3 py-1 rounded text-sm">
+                        {child}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -616,119 +472,169 @@ const EnhancedLessonViewer = ({ lessonId, courseId, onNext, onPrevious }: Lesson
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading lesson...</p>
-        </div>
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   if (!lesson) {
     return (
-      <div className="text-center py-8">
-        <p className="text-gray-600">Lesson not found or not accessible.</p>
+      <div className="text-center p-8">
+        <h3 className="text-lg font-semibold mb-2">Lesson not found</h3>
+        <p className="text-gray-600">The requested lesson could not be found.</p>
       </div>
+    );
+  }
+
+  if (!canAccess) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center">
+          <div className="text-yellow-600 mb-4">
+            <BookOpen className="h-16 w-16 mx-auto" />
+          </div>
+          <h3 className="text-lg font-semibold mb-2">Lesson Not Available</h3>
+          <p className="text-gray-600 mb-4">
+            This lesson is not yet available. It will be released according to the course schedule.
+          </p>
+          {lesson.releaseType === 'scheduled' && (
+            <p className="text-sm text-gray-500">
+              Available on: {new Date(lesson.scheduledDate).toLocaleDateString()}
+            </p>
+          )}
+          {lesson.releaseType === 'drip' && (
+            <p className="text-sm text-gray-500">
+              Available {lesson.dripDays} days after enrollment
+            </p>
+          )}
+        </CardContent>
+      </Card>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">{lesson.title}</h2>
+      {/* Lesson Header */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5" />
+              {lesson.title}
+            </CardTitle>
+            <Badge variant={lessonCompleted ? "default" : "secondary"}>
+              {lessonCompleted ? "Completed" : lesson.type || "Lesson"}
+            </Badge>
+          </div>
           <p className="text-gray-600">{lesson.description}</p>
-        </div>
-        <div className="flex space-x-2">
-          {onPrevious && (
-            <Button variant="outline" onClick={onPrevious}>
-              <ChevronLeft className="h-4 w-4 mr-2" />
-              Previous
-            </Button>
-          )}
-          {onNext && (
-            <Button onClick={onNext}>
-              Next
-              <ChevronRight className="h-4 w-4 ml-2" />
-            </Button>
-          )}
-        </div>
-      </div>
+        </CardHeader>
+      </Card>
 
-      <div className="flex space-x-2 mb-6">
-        <Button
-          variant={currentView === 'content' ? 'default' : 'outline'}
-          onClick={() => setCurrentView('content')}
-        >
-          <BookOpen className="h-4 w-4 mr-2" />
-          Content
-        </Button>
-        {quizzes.length > 0 && (
-          <Button
-            variant={currentView === 'quiz' ? 'default' : 'outline'}
-            onClick={() => setCurrentView('quiz')}
-          >
-            <Brain className="h-4 w-4 mr-2" />
+      {/* Lesson Content */}
+      <Tabs defaultValue="content" className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="content" className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4" />
+            Content
+          </TabsTrigger>
+          <TabsTrigger value="quiz" className="flex items-center gap-2">
+            <HelpCircle className="h-4 w-4" />
             Quiz
-          </Button>
-        )}
-        {flashcards.length > 0 && (
-          <Button
-            variant={currentView === 'flashcards' ? 'default' : 'outline'}
-            onClick={() => setCurrentView('flashcards')}
-          >
-            <Brain className="h-4 w-4 mr-2" />
+          </TabsTrigger>
+          <TabsTrigger value="flashcards" className="flex items-center gap-2">
+            <Brain className="h-4 w-4" />
             Flashcards
-          </Button>
-        )}
-        {keyPoints.length > 0 && (
-          <Button
-            variant={currentView === 'keypoints' ? 'default' : 'outline'}
-            onClick={() => setCurrentView('keypoints')}
-          >
-            <Key className="h-4 w-4 mr-2" />
+          </TabsTrigger>
+          <TabsTrigger value="keypoints" className="flex items-center gap-2">
+            <Lightbulb className="h-4 w-4" />
             Key Points
-          </Button>
-        )}
-        {mindMap.nodes.length > 0 && (
-          <Button
-            variant={currentView === 'mindmap' ? 'default' : 'outline'}
-            onClick={() => setCurrentView('mindmap')}
-          >
-            <Map className="h-4 w-4 mr-2" />
+          </TabsTrigger>
+          <TabsTrigger value="mindmap" className="flex items-center gap-2">
+            <Brain className="h-4 w-4" />
             Mind Map
-          </Button>
-        )}
-      </div>
+          </TabsTrigger>
+        </TabsList>
 
-      <div>
-        {currentView === 'content' && (
+        <TabsContent value="content" className="mt-4">
           <div className="space-y-6">
-            {contentBlocks.map((block) => (
-              <Card key={block.id}>
-                <CardHeader>
-                  <CardTitle className="text-lg">{block.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {renderContentBlock(block)}
+            {contents.length > 0 ? (
+              contents.map((content, index) => (
+                <Card key={content.id || index}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      {content.type === 'text' && <FileText className="h-5 w-5" />}
+                      {content.type === 'video' && <Video className="h-5 w-5" />}
+                      {content.type === 'image' && <ImageIcon className="h-5 w-5" />}
+                      {content.type === 'audio' && <Volume2 className="h-5 w-5" />}
+                      {content.type === 'document' && <FileText className="h-5 w-5" />}
+                      {content.title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {renderContent(content)}
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No content available</h3>
+                  <p className="text-gray-600">This lesson doesn't have any content yet.</p>
                 </CardContent>
               </Card>
-            ))}
-            {contentBlocks.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                <BookOpen className="mx-auto h-12 w-12 mb-4" />
-                <p>No content available for this lesson.</p>
+            )}
+            
+            {!lessonCompleted && (
+              <div className="mt-6 pt-6 border-t">
+                <Button onClick={completeLesson} className="w-full">
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Mark as Complete
+                </Button>
               </div>
             )}
           </div>
-        )}
+        </TabsContent>
 
-        {currentView === 'quiz' && renderQuiz()}
-        {currentView === 'flashcards' && renderFlashcards()}
-        {currentView === 'keypoints' && renderKeyPoints()}
-        {currentView === 'mindmap' && renderMindMap()}
-      </div>
+        <TabsContent value="quiz" className="mt-4">
+          {renderQuizContent()}
+        </TabsContent>
+
+        <TabsContent value="flashcards" className="mt-4">
+          {renderFlashcards()}
+        </TabsContent>
+
+        <TabsContent value="keypoints" className="mt-4">
+          {renderKeyPoints()}
+        </TabsContent>
+
+        <TabsContent value="mindmap" className="mt-4">
+          {renderMindMap()}
+        </TabsContent>
+      </Tabs>
+
+      {/* Navigation */}
+      {(onNext || onPrevious) && (
+        <div className="flex justify-between">
+          <Button
+            variant="outline"
+            onClick={onPrevious}
+            disabled={!hasPrevious}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Previous Lesson
+          </Button>
+
+          <Button
+            onClick={onNext}
+            disabled={!hasNext || !lessonCompleted}
+          >
+            Next Lesson
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
