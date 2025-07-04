@@ -4,7 +4,7 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import { authService } from '@/lib/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Brain, Target, TrendingUp, Plus, Users, Clock, Star } from 'lucide-react';
+import { BookOpen, Brain, Target, TrendingUp, Plus, Users, Clock, Star, Lightbulb } from 'lucide-react';
 import { db } from '@/lib/github-sdk';
 import CourseGenerationWizard from '@/components/course/CourseGenerationWizard';
 import MobileNav from '@/components/layout/MobileNav';

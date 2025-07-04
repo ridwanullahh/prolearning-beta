@@ -16,6 +16,7 @@ import CoursePage from "./pages/course/CoursePage";
 import LessonPage from "./pages/lesson/LessonPage";
 import MarketplacePage from "./pages/marketplace/MarketplacePage";
 import CourseDetailsPage from "./pages/course/CourseDetailsPage";
+import CourseViewer from "./components/course/CourseViewer";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import LoadingScreen from "./components/ui/LoadingScreen";
 import NotFound from "./pages/NotFound";
