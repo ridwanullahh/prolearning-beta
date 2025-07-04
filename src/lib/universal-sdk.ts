@@ -1,3 +1,4 @@
+
 import CryptoJS from 'crypto-js';
 
 export interface UniversalSDKConfig {
@@ -32,7 +33,6 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   isActive: boolean;
-  password?: string;
 }
 
 export default class UniversalSDK {
@@ -53,16 +53,6 @@ export default class UniversalSDK {
 
   async init(): Promise<void> {
     try {
-      console.log('Initializing UniversalSDK with config:', {
-        owner: this.config.owner,
-        repo: this.config.repo,
-        hasToken: !!this.config.token
-      });
-      
-      // Test the GitHub API connection
-      const testResponse = await this.request('/');
-      console.log('GitHub API connection successful:', testResponse.name);
-
       await this.ensureDirectoryExists(this.config.basePath!);
       await this.ensureDirectoryExists(this.config.mediaPath!);
     } catch (error) {
@@ -129,8 +119,6 @@ export default class UniversalSDK {
 
   private async request(endpoint: string, options: RequestInit = {}): Promise<any> {
     const url = `${this.baseUrl}${endpoint}`;
-    console.log('Making GitHub API request to:', url);
-    
     const response = await fetch(url, {
       ...options,
       headers: {
@@ -143,12 +131,6 @@ export default class UniversalSDK {
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.error('GitHub API Error:', {
-        status: response.status,
-        statusText: response.statusText,
-        url,
-        error: errorData
-      });
       throw new Error(errorData);
     }
 
@@ -352,22 +334,16 @@ export default class UniversalSDK {
     return Math.random().toString(36).substr(2, 9);
   }
 
-  // Auth methods with enhanced debugging
+  // Auth methods
   async register(email: string, password: string, profile: any = {}): Promise<User> {
-    console.log('🔍 [AUTH DEBUG] Starting registration for email:', email);
     const users = await this.get<User>('users');
-    console.log('🔍 [AUTH DEBUG] Current users count:', users.length);
-    
     const existingUser = users.find(u => u.email === email);
     
     if (existingUser) {
-      console.log('🔍 [AUTH DEBUG] User already exists:', email);
       throw new Error('User already exists');
     }
 
     const hashedPassword = this.hashPassword(password);
-    console.log('🔍 [AUTH DEBUG] Password hashed successfully');
-    
     const user = await this.insert<User>('users', {
       email,
       password: hashedPassword,
@@ -379,48 +355,17 @@ export default class UniversalSDK {
       updatedAt: new Date().toISOString()
     });
 
-    console.log('🔍 [AUTH DEBUG] User registered successfully:', user.email);
     return user;
   }
 
   async login(email: string, password: string): Promise<string> {
-    console.log('🔍 [AUTH DEBUG] Starting login attempt for email:', email);
     const users = await this.get<User>('users');
-    console.log('🔍 [AUTH DEBUG] Total users in database:', users.length);
-    
     const user = users.find(u => u.email === email);
     
-    if (!user) {
-      console.log('🔍 [AUTH DEBUG] User not found in database:', email);
-      console.log('🔍 [AUTH DEBUG] Available emails:', users.map(u => u.email));
+    if (!user || !this.verifyPassword(password, (user as any).password)) {
       throw new Error('Invalid credentials');
     }
 
-    console.log('🔍 [AUTH DEBUG] User found:', {
-      email: user.email,
-      hasPassword: !!user.password,
-      isActive: user.isActive
-    });
-
-    if (!user.password) {
-      console.log('🔍 [AUTH DEBUG] User has no password set:', email);
-      throw new Error('Invalid credentials');
-    }
-
-    if (!user.isActive) {
-      console.log('🔍 [AUTH DEBUG] User account is inactive:', email);
-      throw new Error('Account is deactivated');
-    }
-
-    const passwordValid = this.verifyPassword(password, user.password);
-    console.log('🔍 [AUTH DEBUG] Password verification result:', passwordValid);
-    
-    if (!passwordValid) {
-      console.log('🔍 [AUTH DEBUG] Password verification failed for user:', email);
-      throw new Error('Invalid credentials');
-    }
-
-    console.log('🔍 [AUTH DEBUG] Login successful for user:', email);
     return this.createSession(user);
   }
 
@@ -433,17 +378,14 @@ export default class UniversalSDK {
       expiresAt
     });
 
-    console.log('🔍 [AUTH DEBUG] Session created for user:', user.email);
     return token;
   }
 
   getSession(token: string) {
     const session = this.sessions.get(token);
     if (!session || session.expiresAt < Date.now()) {
-      console.log('🔍 [AUTH DEBUG] Session expired or not found');
       return null;
     }
-    console.log('🔍 [AUTH DEBUG] Valid session found for user:', session.user.email);
     return session;
   }
 
@@ -453,7 +395,6 @@ export default class UniversalSDK {
   }
 
   destroySession(token: string): boolean {
-    console.log('🔍 [AUTH DEBUG] Destroying session');
     return this.sessions.delete(token);
   }
 
@@ -462,14 +403,7 @@ export default class UniversalSDK {
   }
 
   verifyPassword(password: string, hash: string): boolean {
-    const hashedInput = this.hashPassword(password);
-    const result = hashedInput === hash;
-    console.log('🔍 [AUTH DEBUG] Password verification:', {
-      inputHash: hashedInput.substring(0, 10) + '...',
-      storedHash: hash.substring(0, 10) + '...',
-      match: result
-    });
-    return result;
+    return this.hashPassword(password) === hash;
   }
 
   private generateSessionToken(): string {
