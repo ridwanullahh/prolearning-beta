@@ -90,13 +90,14 @@ const CourseBuilder = () => {
 
   const loadCourse = async (courseId: string) => {
     try {
-      setLoading(true);
-      const [courseData, lessonsData] = await Promise.all([
+      const [courseData, lessonsData, academicLevelsData, subjectsData] = await Promise.all([
         db.getItem('courses', courseId),
         db.queryBuilder('lessons')
-          .where((l: any) => l.courseId === courseId)
-          .sort('order', 'asc')
-          .exec()
+          .where((lesson: any) => lesson.courseId === courseId)
+          .orderBy('order', 'asc')
+          .exec(),
+        db.get('academicLevels'),
+        db.get('subjects')
       ]);
 
       if (courseData) {
@@ -131,13 +132,6 @@ const CourseBuilder = () => {
       }
     } catch (error) {
       console.error('Error loading course:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load course data',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
     }
   };
 

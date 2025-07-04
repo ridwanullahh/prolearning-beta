@@ -36,7 +36,7 @@ class AuthService {
         id: user.id!,
         email: user.email,
         name: user.name,
-        role: user.role,
+        role: user.role as 'learner' | 'instructor' | 'super_admin',
         avatar: user.avatar,
         country: user.country,
         currency: user.currency

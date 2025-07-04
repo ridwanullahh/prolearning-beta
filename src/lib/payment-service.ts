@@ -282,7 +282,7 @@ class PaymentService {
     try {
       return await db.queryBuilder('transactions')
         .where(item => item.userId === userId)
-        .sort('createdAt', 'desc')
+        .orderBy('createdAt', 'desc')
         .exec();
     } catch (error) {
       console.error('Error fetching transaction history:', error);

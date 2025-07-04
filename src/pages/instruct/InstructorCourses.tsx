@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -48,43 +47,17 @@ const InstructorCourses = () => {
   }, [courses, searchTerm, statusFilter]);
 
   const loadCourses = async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
-      
-      // Get instructor's courses
-      const coursesData = await db.queryBuilder('courses')
-        .where((c: any) => c.creatorId === user?.id)
-        .sort('updatedAt', 'desc')
+      const courses = await db.queryBuilder('courses')
+        .where((course: any) => course.creatorId === user.id)
+        .orderBy('createdAt', 'desc')
         .exec();
-
-      // Get enrollment data for each course
-      const coursesWithStats = await Promise.all(
-        coursesData.map(async (course: any) => {
-          const enrollments = await db.queryBuilder('enrollments')
-            .where((e: any) => e.courseId === course.id && e.status === 'active')
-            .exec();
-
-          const lessons = await db.queryBuilder('lessons')
-            .where((l: any) => l.courseId === course.id)
-            .exec();
-
-          return {
-            ...course,
-            enrollmentCount: enrollments.length,
-            lessonCount: lessons.length,
-            totalRevenue: enrollments.reduce((acc: number, e: any) => acc + (e.amount || 0), 0)
-          };
-        })
-      );
-
-      setCourses(coursesWithStats);
+      setCourses(courses);
     } catch (error) {
       console.error('Error loading courses:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load courses',
-        variant: 'destructive'
-      });
     } finally {
       setLoading(false);
     }

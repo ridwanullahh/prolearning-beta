@@ -58,7 +58,7 @@ const CourseViewer = () => {
         db.getItem('courses', courseId),
         db.queryBuilder('lessons')
           .where((lesson: any) => lesson.courseId === courseId)
-          .sort('order', 'asc')
+          .orderBy('order', 'asc')
           .exec(),
         user ? db.queryBuilder('userProgress')
           .where((p: any) => p.userId === user.id && p.courseId === courseId)
@@ -221,7 +221,8 @@ const CourseViewer = () => {
           <div className="lg:col-span-3">
             {currentLesson ? (
               <EnhancedLessonViewer
-                lesson={currentLesson}
+                lessonId={currentLesson.id}
+                courseId={course.id}
                 onComplete={() => handleLessonComplete(currentLesson.id)}
                 onNext={goToNextLesson}
                 onPrevious={goToPreviousLesson}

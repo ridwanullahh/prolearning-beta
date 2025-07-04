@@ -441,6 +441,10 @@ class QueryBuilder<T> {
     return this;
   }
 
+  sort(keyOrFn: keyof T | ((item: T) => any), direction: 'asc' | 'desc' = 'asc'): this {
+    return this.orderBy(keyOrFn, direction);
+  }
+
   limit(count: number): this {
     this.limitCount = count;
     return this;

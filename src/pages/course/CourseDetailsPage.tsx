@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,12 +33,15 @@ const CourseDetailsPage = () => {
   const loadCourseData = async (courseId: string) => {
     try {
       setLoading(true);
-      
-      const [courseData, lessonsData] = await Promise.all([
+      const [courseData, lessonsData, reviewsData] = await Promise.all([
         db.getItem('courses', courseId),
         db.queryBuilder('lessons')
           .where((lesson: any) => lesson.courseId === courseId)
-          .sort('order', 'asc')
+          .orderBy('order', 'asc')
+          .exec(),
+        db.queryBuilder('reviews')
+          .where((review: any) => review.courseId === courseId)
+          .orderBy('createdAt', 'desc')
           .exec()
       ]);
 
@@ -76,12 +78,7 @@ const CourseDetailsPage = () => {
       }
 
     } catch (error) {
-      console.error('Error loading course:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load course details',
-        variant: 'destructive'
-      });
+      console.error('Error loading course data:', error);
     } finally {
       setLoading(false);
     }
