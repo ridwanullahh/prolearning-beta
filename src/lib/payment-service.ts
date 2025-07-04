@@ -8,7 +8,7 @@ export interface PaymentRequest {
   email: string;
   userId: string;
   courseId?: string;
-  type: 'course_purchase' | 'subscription' | 'ai_generation';
+  type: 'course_purchase' | 'subscription' | 'ai_generation' | 'wallet_funding';
   description: string;
 }
 
