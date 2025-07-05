@@ -64,11 +64,13 @@ const EnhancedLessonViewer = ({
   useEffect(() => {
     if (lessonId) {
       loadLesson();
-      // Reset quiz state when lesson changes
+      // Reset states when lesson changes
       setCurrentQuiz(null);
       setQuizAnswers({});
       setQuizScore(null);
       setQuizAttempts(0);
+      setCurrentFlashcard(0);
+      setShowFlashcardAnswer(false);
     }
   }, [lessonId]);
 
@@ -282,7 +284,11 @@ const EnhancedLessonViewer = ({
           </div>
         );
       default:
-        return <p>Unsupported content type: {content.type}</p>;
+        return (
+          <div className="prose max-w-none">
+            <ReactMarkdown>{content.content || 'No content available'}</ReactMarkdown>
+          </div>
+        );
     }
   };
 
@@ -350,7 +356,11 @@ const EnhancedLessonViewer = ({
                 </CardContent>
               </Card>
             ))}
-            <Button onClick={submitQuiz} className="w-full">
+            <Button 
+              onClick={submitQuiz} 
+              className="w-full"
+              disabled={Object.keys(quizAnswers).length === 0}
+            >
               Submit Quiz
             </Button>
           </div>
@@ -496,13 +506,16 @@ const EnhancedLessonViewer = ({
                 <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg font-medium mb-2">
                   {node.label}
                 </div>
-                {node.children && (
+                {node.children && Array.isArray(node.children) && (
                   <div className="flex flex-wrap justify-center gap-2">
-                    {node.children.map((child: string, childIndex: number) => (
-                      <div key={childIndex} className="bg-gray-100 text-gray-700 px-3 py-1 rounded text-sm">
-                        {child}
-                      </div>
-                    ))}
+                    {node.children.map((childId: string, childIndex: number) => {
+                      const childNode = mapData.nodes?.find((n: any) => n.id === childId);
+                      return (
+                        <div key={childIndex} className="bg-gray-100 text-gray-700 px-3 py-1 rounded text-sm">
+                          {childNode?.label || `Child ${childIndex + 1}`}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

@@ -4,14 +4,13 @@ import { useParams, Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Eye, User, ArrowLeft, Share2 } from 'lucide-react';
+import { Eye, ArrowLeft, Calendar, User } from 'lucide-react';
 import { db } from '@/lib/github-sdk';
 import ReactMarkdown from 'react-markdown';
 
 const BlogPost = () => {
   const { slug } = useParams();
   const [post, setPost] = useState<any>(null);
-  const [author, setAuthor] = useState<any>(null);
   const [relatedPosts, setRelatedPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -56,12 +55,6 @@ const BlogPost = () => {
         viewCount: (foundPost.viewCount || 0) + 1
       });
 
-      // Load author information
-      if (foundPost.authorId) {
-        const authorData = await db.getItem('users', foundPost.authorId);
-        setAuthor(authorData);
-      }
-
       // Load related posts by category
       if (foundPost.category) {
         const related = await db.queryBuilder('blogPosts')
@@ -83,19 +76,6 @@ const BlogPost = () => {
 
   const generateSlug = (title: string) => {
     return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-  };
-
-  const sharePost = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: post.title,
-        text: post.excerpt,
-        url: window.location.href,
-      });
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      // You could show a toast notification here
-    }
   };
 
   if (loading) {
@@ -145,10 +125,10 @@ const BlogPost = () => {
             </Link>
           </div>
 
-          {/* Article */}
+          {/* Blog Post */}
           <Card className="mb-8">
             {post.featuredImage && (
-              <div className="aspect-video mb-6">
+              <div className="aspect-video">
                 <img
                   src={post.featuredImage}
                   alt={post.title}
@@ -156,48 +136,41 @@ const BlogPost = () => {
                 />
               </div>
             )}
-            
             <CardContent className="p-8">
-              {/* Article Header */}
+              {/* Post Header */}
               <div className="mb-6">
                 <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
                     {new Date(post.publishedAt || post.createdAt).toLocaleDateString()}
                   </div>
-                  {post.viewCount && (
-                    <div className="flex items-center gap-1">
-                      <Eye className="h-4 w-4" />
-                      {post.viewCount} views
-                    </div>
-                  )}
-                  {author && (
+                  <div className="flex items-center gap-1">
+                    <Eye className="h-4 w-4" />
+                    {post.viewCount || 0} views
+                  </div>
+                  {post.author && (
                     <div className="flex items-center gap-1">
                       <User className="h-4 w-4" />
-                      {author.name}
+                      {post.author}
                     </div>
                   )}
                 </div>
 
                 <h1 className="text-4xl font-bold text-gray-900 mb-4">{post.title}</h1>
                 
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-2">
-                    {post.category && (
-                      <Badge variant="secondary">{post.category}</Badge>
-                    )}
-                    {post.tags && JSON.parse(post.tags).map((tag: string) => (
-                      <Badge key={tag} variant="outline">{tag}</Badge>
-                    ))}
-                  </div>
-                  <Button variant="outline" size="sm" onClick={sharePost}>
-                    <Share2 className="h-4 w-4 mr-2" />
-                    Share
-                  </Button>
+                <div className="flex gap-2 mb-6">
+                  <Badge variant="secondary">{post.category}</Badge>
+                  {post.tags && JSON.parse(post.tags).map((tag: string) => (
+                    <Badge key={tag} variant="outline">{tag}</Badge>
+                  ))}
                 </div>
+
+                {post.excerpt && (
+                  <p className="text-xl text-gray-600 mb-6">{post.excerpt}</p>
+                )}
               </div>
 
-              {/* Article Content */}
+              {/* Post Content */}
               <div className="prose max-w-none">
                 <ReactMarkdown>{post.content}</ReactMarkdown>
               </div>
@@ -211,15 +184,6 @@ const BlogPost = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {relatedPosts.map((relatedPost) => (
                   <Card key={relatedPost.id} className="hover:shadow-lg transition-shadow">
-                    {relatedPost.featuredImage && (
-                      <div className="aspect-video">
-                        <img
-                          src={relatedPost.featuredImage}
-                          alt={relatedPost.title}
-                          className="w-full h-full object-cover rounded-t-lg"
-                        />
-                      </div>
-                    )}
                     <CardContent className="p-4">
                       <h3 className="font-semibold mb-2">
                         <Link
@@ -232,6 +196,9 @@ const BlogPost = () => {
                       <p className="text-gray-600 text-sm line-clamp-2">
                         {relatedPost.excerpt || relatedPost.content.substring(0, 100) + '...'}
                       </p>
+                      <div className="mt-2">
+                        <Badge variant="outline">{relatedPost.category}</Badge>
+                      </div>
                     </CardContent>
                   </Card>
                 ))}

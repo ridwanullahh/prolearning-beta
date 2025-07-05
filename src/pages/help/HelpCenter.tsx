@@ -5,9 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, HelpCircle, MessageSquare, Eye } from 'lucide-react';
+import { Search, BookOpen, Eye, MessageCircle } from 'lucide-react';
 import { db } from '@/lib/github-sdk';
-import { authService } from '@/lib/auth';
 
 const HelpCenter = () => {
   const [articles, setArticles] = useState<any[]>([]);
@@ -16,7 +15,6 @@ const HelpCenter = () => {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const user = authService.getCurrentUser();
 
   useEffect(() => {
     loadHelpArticles();
@@ -30,7 +28,7 @@ const HelpCenter = () => {
     try {
       const publishedArticles = await db.queryBuilder('helpArticles')
         .where((article: any) => article.status === 'published')
-        .orderBy('viewCount', 'desc')
+        .orderBy('createdAt', 'desc')
         .exec();
 
       setArticles(publishedArticles);
@@ -51,7 +49,7 @@ const HelpCenter = () => {
     if (searchTerm) {
       filtered = filtered.filter(article =>
         article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        article.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        article.content?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         article.tags?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -91,46 +89,6 @@ const HelpCenter = () => {
             </p>
           </div>
 
-          {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <HelpCircle className="h-6 w-6 text-blue-600" />
-                  Browse Help Articles
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 mb-4">
-                  Search through our comprehensive knowledge base to find answers to common questions.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-6 w-6 text-green-600" />
-                  Contact Support
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 mb-4">
-                  Can't find what you're looking for? Create a support ticket and our team will help you.
-                </p>
-                {user ? (
-                  <Link to="/support/ticket">
-                    <Button>Create Ticket</Button>
-                  </Link>
-                ) : (
-                  <Link to="/auth">
-                    <Button>Login to Create Ticket</Button>
-                  </Link>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
           {/* Search and Filter */}
           <div className="mb-8">
             <div className="flex flex-col md:flex-row gap-4 items-center">
@@ -165,7 +123,19 @@ const HelpCenter = () => {
             </div>
           </div>
 
-          {/* Help Articles */}
+          {/* Quick Actions */}
+          <div className="mb-8">
+            <div className="flex justify-center">
+              <Link to="/support">
+                <Button>
+                  <MessageCircle className="mr-2 h-4 w-4" />
+                  Contact Support
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          {/* Help Articles Grid */}
           {filteredArticles.length === 0 ? (
             <div className="text-center py-12">
               <h3 className="text-xl font-semibold text-gray-900 mb-2">No articles found</h3>
@@ -176,7 +146,17 @@ const HelpCenter = () => {
               {filteredArticles.map((article) => (
                 <Card key={article.id} className="hover:shadow-lg transition-shadow">
                   <CardHeader>
-                    <CardTitle className="text-lg mb-2">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+                      <BookOpen className="h-4 w-4" />
+                      <span>{article.category}</span>
+                      {article.viewCount && (
+                        <>
+                          <Eye className="h-4 w-4 ml-2" />
+                          {article.viewCount}
+                        </>
+                      )}
+                    </div>
+                    <CardTitle className="text-xl mb-2">
                       <Link
                         to={`/help/${article.slug || generateSlug(article.title)}`}
                         className="hover:text-blue-600 transition-colors"
@@ -184,17 +164,17 @@ const HelpCenter = () => {
                         {article.title}
                       </Link>
                     </CardTitle>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <Eye className="h-4 w-4" />
-                      {article.viewCount || 0} views
-                    </div>
                   </CardHeader>
                   <CardContent>
                     <p className="text-gray-600 mb-4 line-clamp-3">
-                      {article.content.substring(0, 150) + '...'}
+                      {article.content?.substring(0, 150) + '...'}
                     </p>
                     <div className="flex items-center justify-between">
-                      <Badge variant="secondary">{article.category}</Badge>
+                      <div className="flex gap-2">
+                        {article.tags && JSON.parse(article.tags).slice(0, 2).map((tag: string) => (
+                          <Badge key={tag} variant="outline">{tag}</Badge>
+                        ))}
+                      </div>
                       <Link
                         to={`/help/${article.slug || generateSlug(article.title)}`}
                         className="text-blue-600 hover:text-blue-800 font-medium text-sm"
