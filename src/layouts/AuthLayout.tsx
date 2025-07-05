@@ -108,7 +108,12 @@ const RegisterPage = () => {
     setLoading(true);
 
     try {
-      await authService.register(formData.email, formData.password, formData.name, formData.role);
+      await authService.register({
+        email: formData.email,
+        password: formData.password,
+        name: formData.name,
+        role: formData.role
+      });
       toast({
         title: 'Success',
         description: 'Account created successfully',

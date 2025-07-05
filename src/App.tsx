@@ -10,7 +10,7 @@ import AuthLayout from './layouts/AuthLayout';
 import LearnerDashboard from './pages/dashboard/LearnerDashboard';
 import MyCourses from './pages/dashboard/MyCourses';
 import LessonPage from './pages/learner/LessonPage';
-import InstructorDashboard from './pages/instructor/InstructorDashboard';
+import InstructorDashboard from './pages/instruct/InstructorDashboard';
 import InstructorCourses from './pages/instruct/InstructorCourses';
 import CourseBuilder from './pages/instruct/CourseBuilder';
 import LessonEditor from './pages/instructor/LessonEditor';
