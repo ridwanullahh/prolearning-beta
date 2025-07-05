@@ -1,8 +1,11 @@
+
 import { config } from './config';
+import CryptoJS from 'crypto-js';
 
 class GitHubDatabase {
   private initialized = false;
   private tables: Record<string, any[]> = {};
+  private sessions: Map<string, { user: any; expiresAt: number }> = new Map();
 
   async initialize() {
     if (this.initialized) return;
@@ -45,7 +48,11 @@ class GitHubDatabase {
       supportTickets: [],
       ticketMessages: [],
       courseGenerationJobs: [],
-      mediaUploads: []
+      mediaUploads: [],
+      userProfiles: [],
+      wallets: [],
+      aiGenerationUsage: [],
+      ticketReplies: []
     };
 
     this.initialized = true;
@@ -113,6 +120,82 @@ class GitHubDatabase {
 
   queryBuilder(table: string) {
     return new QueryBuilder(this, table);
+  }
+
+  // Authentication methods
+  async register(email: string, password: string, profile: any = {}): Promise<any> {
+    await this.initialize();
+    const users = this.tables.users;
+    const existingUser = users.find((u: any) => u.email === email);
+    
+    if (existingUser) {
+      throw new Error('User already exists');
+    }
+
+    const hashedPassword = this.hashPassword(password);
+    const user = await this.insert('users', {
+      email,
+      password: hashedPassword,
+      name: profile.name || email.split('@')[0],
+      role: profile.role || 'learner',
+      ...profile,
+      isActive: true
+    });
+
+    return user;
+  }
+
+  async login(email: string, password: string): Promise<string> {
+    await this.initialize();
+    const users = this.tables.users;
+    const user = users.find((u: any) => u.email === email);
+    
+    if (!user || !this.verifyPassword(password, user.password)) {
+      throw new Error('Invalid credentials');
+    }
+
+    return this.createSession(user);
+  }
+
+  createSession(user: any): string {
+    const token = this.generateSessionToken();
+    const expiresAt = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
+    
+    this.sessions.set(token, {
+      user,
+      expiresAt
+    });
+
+    return token;
+  }
+
+  getSession(token: string) {
+    const session = this.sessions.get(token);
+    if (!session || session.expiresAt < Date.now()) {
+      return null;
+    }
+    return session;
+  }
+
+  getCurrentUser(token: string): any | null {
+    const session = this.getSession(token);
+    return session?.user || null;
+  }
+
+  destroySession(token: string): boolean {
+    return this.sessions.delete(token);
+  }
+
+  hashPassword(password: string): string {
+    return CryptoJS.SHA256(password).toString();
+  }
+
+  verifyPassword(password: string, hash: string): boolean {
+    return this.hashPassword(password) === hash;
+  }
+
+  private generateSessionToken(): string {
+    return CryptoJS.lib.WordArray.random(32).toString();
   }
 
   private generateId(): string {
