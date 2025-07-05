@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -225,7 +224,7 @@ const HelpArticle = () => {
                         {relatedArticle.content.substring(0, 100) + '...'}
                       </p>
                       <div className="mt-2">
-                        <Badge variant="outline" size="sm">{relatedArticle.category}</Badge>
+                        <Badge variant="outline">{relatedArticle.category}</Badge>
                       </div>
                     </CardContent>
                   </Card>
