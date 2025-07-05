@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -52,6 +53,7 @@ const EnhancedLessonViewer = ({
   const [currentQuiz, setCurrentQuiz] = useState<any>(null);
   const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({});
   const [quizScore, setQuizScore] = useState<number | null>(null);
+  const [quizAttempts, setQuizAttempts] = useState(0);
   const [currentFlashcard, setCurrentFlashcard] = useState(0);
   const [showFlashcardAnswer, setShowFlashcardAnswer] = useState(false);
   const [lessonCompleted, setLessonCompleted] = useState(false);
@@ -62,6 +64,11 @@ const EnhancedLessonViewer = ({
   useEffect(() => {
     if (lessonId) {
       loadLesson();
+      // Reset quiz state when lesson changes
+      setCurrentQuiz(null);
+      setQuizAnswers({});
+      setQuizScore(null);
+      setQuizAttempts(0);
     }
   }, [lessonId]);
 
@@ -134,7 +141,7 @@ const EnhancedLessonViewer = ({
     }));
   };
 
-  const submitQuiz = () => {
+  const submitQuiz = async () => {
     if (!currentQuiz) return;
 
     const questions = JSON.parse(currentQuiz.questions || '[]');
@@ -147,11 +154,34 @@ const EnhancedLessonViewer = ({
     });
 
     const score = (correct / questions.length) * 100;
+    const newAttempts = quizAttempts + 1;
+    
     setQuizScore(score);
+    setQuizAttempts(newAttempts);
+
+    // Save quiz attempt to database
+    if (user) {
+      await db.insert('quizAttempts', {
+        userId: user.id,
+        quizId: currentQuiz.id,
+        lessonId: lessonId,
+        courseId: courseId,
+        score: score,
+        answers: JSON.stringify(quizAnswers),
+        attemptNumber: newAttempts,
+        completedAt: new Date().toISOString()
+      });
+    }
 
     if (score >= (currentQuiz.passingScore || 70)) {
       setLessonCompleted(true);
     }
+  };
+
+  const retakeQuiz = () => {
+    if (quizAttempts >= (currentQuiz.attempts || 3)) return;
+    setQuizAnswers({});
+    setQuizScore(null);
   };
 
   const nextFlashcard = () => {
@@ -178,6 +208,7 @@ const EnhancedLessonViewer = ({
   const renderContent = (content: any) => {
     switch (content.type) {
       case 'text':
+      case 'rich_text':
         return (
           <div className="prose max-w-none">
             <ReactMarkdown>{content.content}</ReactMarkdown>
@@ -186,7 +217,7 @@ const EnhancedLessonViewer = ({
       case 'video':
         return (
           <div className="space-y-2">
-            {content.mediaUrl.includes('youtube.com') || content.mediaUrl.includes('vimeo.com') ? (
+            {content.mediaUrl?.includes('youtube.com') || content.mediaUrl?.includes('vimeo.com') ? (
               <div className="aspect-video">
                 <iframe
                   src={content.mediaUrl}
@@ -209,7 +240,7 @@ const EnhancedLessonViewer = ({
         return (
           <div className="space-y-2">
             <img
-              src={content.imageUrl}
+              src={content.mediaUrl || content.imageUrl}
               alt={content.altText || content.title}
               className="w-full rounded-lg"
             />
@@ -242,7 +273,7 @@ const EnhancedLessonViewer = ({
                 )}
               </div>
               <Button variant="outline" size="sm" asChild>
-                <a href={content.fileUrl} target="_blank" rel="noopener noreferrer">
+                <a href={content.fileUrl || content.mediaUrl} target="_blank" rel="noopener noreferrer">
                   <Download className="h-4 w-4 mr-2" />
                   Download
                 </a>
@@ -259,12 +290,17 @@ const EnhancedLessonViewer = ({
     if (!currentQuiz) return <p>No quiz available for this lesson.</p>;
 
     const questions = JSON.parse(currentQuiz.questions || '[]');
+    const maxAttempts = currentQuiz.attempts || 3;
+    const canRetake = quizAttempts < maxAttempts && quizScore !== null && quizScore < (currentQuiz.passingScore || 70);
 
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">{currentQuiz.title}</h3>
-          <Badge>Passing Score: {currentQuiz.passingScore || 70}%</Badge>
+          <div className="flex gap-2">
+            <Badge>Passing Score: {currentQuiz.passingScore || 70}%</Badge>
+            <Badge variant="outline">Attempts: {quizAttempts}/{maxAttempts}</Badge>
+          </div>
         </div>
 
         {quizScore === null ? (
@@ -327,12 +363,19 @@ const EnhancedLessonViewer = ({
               <p className="text-lg mb-4">
                 {quizScore >= (currentQuiz.passingScore || 70) ? 'Congratulations! You passed!' : 'You need to retake the quiz.'}
               </p>
-              {quizScore >= (currentQuiz.passingScore || 70) && !lessonCompleted && (
-                <Button onClick={completeLesson}>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Complete Lesson
-                </Button>
-              )}
+              <div className="space-y-2">
+                {quizScore >= (currentQuiz.passingScore || 70) && !lessonCompleted && (
+                  <Button onClick={completeLesson}>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Complete Lesson
+                  </Button>
+                )}
+                {canRetake && (
+                  <Button onClick={retakeQuiz} variant="outline">
+                    Retake Quiz ({quizAttempts}/{maxAttempts})
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
         )}
@@ -441,20 +484,20 @@ const EnhancedLessonViewer = ({
     if (mindMaps.length === 0) return <p>No mind map available for this lesson.</p>;
 
     const mindMap = mindMaps[0];
-    const nodes = JSON.parse(mindMap.nodes || '[]');
+    const mapData = JSON.parse(mindMap.data || '{}');
 
     return (
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">{mindMap.title}</h3>
         <div className="bg-white border rounded-lg p-6">
           <div className="flex flex-col items-center space-y-4">
-            {nodes.map((node: any, index: number) => (
+            {mapData.nodes?.map((node: any, index: number) => (
               <div key={node.id || index} className="text-center">
-                <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg font-medium">
+                <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg font-medium mb-2">
                   {node.label}
                 </div>
                 {node.children && (
-                  <div className="flex flex-wrap justify-center gap-2 mt-2">
+                  <div className="flex flex-wrap justify-center gap-2">
                     {node.children.map((child: string, childIndex: number) => (
                       <div key={childIndex} className="bg-gray-100 text-gray-700 px-3 py-1 rounded text-sm">
                         {child}
@@ -564,6 +607,7 @@ const EnhancedLessonViewer = ({
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       {content.type === 'text' && <FileText className="h-5 w-5" />}
+                      {content.type === 'rich_text' && <FileText className="h-5 w-5" />}
                       {content.type === 'video' && <Video className="h-5 w-5" />}
                       {content.type === 'image' && <ImageIcon className="h-5 w-5" />}
                       {content.type === 'audio' && <Volume2 className="h-5 w-5" />}

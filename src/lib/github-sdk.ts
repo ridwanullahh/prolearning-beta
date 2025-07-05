@@ -251,6 +251,26 @@ const schemas: Record<string, SchemaDefinition> = {
       feedback: 'immediate'
     }
   },
+  quizAttempts: {
+    required: ['userId', 'quizId', 'lessonId', 'score', 'answers', 'attemptNumber'],
+    types: {
+      id: 'string',
+      uid: 'string',
+      userId: 'string',
+      quizId: 'string',
+      lessonId: 'string',
+      courseId: 'string',
+      score: 'number',
+      answers: 'string',
+      attemptNumber: 'number',
+      completedAt: 'date',
+      timeTaken: 'number'
+    },
+    defaults: {
+      completedAt: new Date().toISOString(),
+      timeTaken: 0
+    }
+  },
   flashcards: {
     required: ['lessonId', 'front', 'back', 'difficulty', 'order'],
     types: {
@@ -655,6 +675,27 @@ const schemas: Record<string, SchemaDefinition> = {
       createdAt: new Date().toISOString()
     }
   },
+  aiGenerationUsage: {
+    required: ['userId', 'month', 'freeGenerationsUsed', 'paidGenerationsUsed', 'subscriptionActive'],
+    types: {
+      id: 'string',
+      uid: 'string',
+      userId: 'string',
+      month: 'string',
+      freeGenerationsUsed: 'number',
+      paidGenerationsUsed: 'number',
+      subscriptionActive: 'boolean',
+      createdAt: 'date',
+      updatedAt: 'date'
+    },
+    defaults: {
+      freeGenerationsUsed: 0,
+      paidGenerationsUsed: 0,
+      subscriptionActive: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  }
 };
 
 // GitHub SDK Configuration
