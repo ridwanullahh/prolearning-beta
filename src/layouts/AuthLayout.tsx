@@ -87,7 +87,7 @@ const RegisterPage = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'learner'
+    role: 'learner' as 'learner' | 'instructor'
   });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -163,7 +163,7 @@ const RegisterPage = () => {
               <select
                 id="role"
                 value={formData.role}
-                onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
+                onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value as 'learner' | 'instructor' }))}
                 className="w-full p-2 border border-gray-300 rounded-md"
               >
                 <option value="learner">Learn (Student)</option>
