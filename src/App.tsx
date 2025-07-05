@@ -1,17 +1,18 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
-import MarketplacePage from './pages/MarketplacePage';
-import CourseDetailsPage from './pages/CourseDetailsPage';
+import MarketplacePage from './pages/marketplace/MarketplacePage';
+import CourseDetailsPage from './pages/course/CourseDetailsPage';
 import BlogArchive from './pages/blog/BlogArchive';
 import BlogPost from './pages/blog/BlogPost';
 import AuthLayout from './layouts/AuthLayout';
-import LearnerDashboard from './pages/learner/LearnerDashboard';
-import MyCourses from './pages/learner/MyCourses';
+import LearnerDashboard from './pages/dashboard/LearnerDashboard';
+import MyCourses from './pages/dashboard/MyCourses';
 import LessonPage from './pages/learner/LessonPage';
 import InstructorDashboard from './pages/instructor/InstructorDashboard';
-import InstructorCourses from './pages/instructor/InstructorCourses';
-import CourseBuilder from './pages/instructor/CourseBuilder';
+import InstructorCourses from './pages/instruct/InstructorCourses';
+import CourseBuilder from './pages/instruct/CourseBuilder';
 import LessonEditor from './pages/instructor/LessonEditor';
 import SuperAdminDashboard from './pages/super_admin/SuperAdminDashboard';
 import NotFound from './pages/NotFound';

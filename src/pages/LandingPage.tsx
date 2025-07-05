@@ -1,314 +1,267 @@
-
-import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { BookOpen, Users, Star, Calendar, Search, User } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { BookOpen, Users, Star, ArrowRight, Play, Award, TrendingUp, Menu, X } from 'lucide-react';
+import { db } from '@/lib/github-sdk';
+import { authService } from '@/lib/auth';
+import MobileNav from '@/components/shared/MobileNav';
 
 const LandingPage = () => {
+  const [featuredCourses, setFeaturedCourses] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    totalCourses: 0,
+    totalStudents: 0,
+    totalInstructors: 0
+  });
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
   const user = authService.getCurrentUser();
 
+  useEffect(() => {
+    loadLandingData();
+  }, []);
+
+  const loadLandingData = async () => {
+    try {
+      // Load featured courses
+      const courses = await db.queryBuilder('courses')
+        .where((course: any) => course.isPublished && course.featured)
+        .limit(6)
+        .exec();
+      setFeaturedCourses(courses);
+
+      // Load platform stats
+      const [allCourses, allUsers] = await Promise.all([
+        db.get('courses'),
+        db.get('users')
+      ]);
+
+      setStats({
+        totalCourses: allCourses.filter((c: any) => c.isPublished).length,
+        totalStudents: allUsers.filter((u: any) => u.role === 'learner').length,
+        totalInstructors: allUsers.filter((u: any) => u.role === 'instructor').length
+      });
+    } catch (error) {
+      console.error('Error loading landing data:', error);
+    }
+  };
+
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Navigation */}
       <nav className="bg-white shadow-sm">
         <div className="container mx-auto px-4">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <Link to="/" className="text-2xl font-bold text-blue-600">
-                EduPlatform
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center">
+              <Link to="/" className="text-xl font-bold text-blue-600">
+                EduLearn
               </Link>
             </div>
-            <div className="hidden md:flex items-center space-x-6">
-              <Link to="/marketplace" className="text-gray-600 hover:text-blue-600">
-                Courses
-              </Link>
-              <Link to="/blog" className="text-gray-600 hover:text-blue-600">
-                Blog
-              </Link>
-              <Link to="/help" className="text-gray-600 hover:text-blue-600">
-                Help
-              </Link>
-              {user ? (
-                <div className="flex items-center space-x-4">
-                  <Link to="/dashboard" className="text-gray-600 hover:text-blue-600">
-                    Dashboard
-                  </Link>
-                  {user.role === 'instructor' && (
-                    <Link to="/instruct" className="text-gray-600 hover:text-blue-600">
-                      Teach
+
+            {/* Desktop Navigation */}
+            <div className="hidden md:block">
+              <div className="ml-10 flex items-baseline space-x-4">
+                <Link to="/marketplace" className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
+                  Courses
+                </Link>
+                <Link to="/blog" className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
+                  Blog
+                </Link>
+                <Link to="/help" className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
+                  Help
+                </Link>
+                {user ? (
+                  <div className="flex items-center space-x-4">
+                    <Link to="/dashboard">
+                      <Button variant="outline" size="sm">Dashboard</Button>
                     </Link>
-                  )}
-                  {user.role === 'super_admin' && (
-                    <Link to="/super-admin" className="text-gray-600 hover:text-blue-600">
-                      Admin
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => authService.logout()}
+                    >
+                      Logout
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-4">
+                    <Link to="/auth/login">
+                      <Button variant="outline" size="sm">Login</Button>
                     </Link>
-                  )}
-                  <Link to="/support" className="text-gray-600 hover:text-blue-600">
-                    Support
-                  </Link>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-4">
-                  <Link to="/auth/login" className="text-gray-600 hover:text-blue-600">
-                    Login
-                  </Link>
-                  <Link to="/auth/register" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-                    Sign Up
-                  </Link>
-                </div>
-              )}
+                    <Link to="/auth/register">
+                      <Button size="sm">Sign Up</Button>
+                    </Link>
+                  </div>
+                )}
+              </div>
             </div>
-            <MobileNav />
+
+            {/* Mobile menu button */}
+            <div className="md:hidden">
+              <MobileNav />
+            </div>
           </div>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section className="relative py-20 lg:py-32">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-4xl md:text-6xl font-bold text-gray-900 mb-6"
-            >
-              AI-Powered Learning for
-              <span className="text-blue-600 block">All Academic Levels</span>
-            </motion.h1>
-            
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto"
-            >
-              From early childhood to postgraduate education, ProLearning provides personalized AI-generated courses, 
-              expert-created content, and comprehensive learning tools for students worldwide.
-            </motion.p>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="flex flex-col sm:flex-row gap-4 justify-center items-center"
-            >
+      <section className="py-20">
+        <div className="container mx-auto px-4 text-center">
+          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
+            Learn Anything, <br />
+            <span className="text-blue-600">Anytime, Anywhere</span>
+          </h1>
+          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+            Discover thousands of courses from expert instructors. Build skills for today and tomorrow with our AI-powered learning platform.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link to="/marketplace">
+              <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
+                Explore Courses
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+            {!user && (
               <Link to="/auth/register">
-                <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3">
+                <Button size="lg" variant="outline">
                   Start Learning Free
                 </Button>
               </Link>
-              <Link to="/marketplace">
-                <Button size="lg" variant="outline" className="px-8 py-3">
-                  <Search className="h-4 w-4 mr-2" />
-                  Explore Courses
-                </Button>
-              </Link>
-            </motion.div>
+            )}
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Everything You Need to Excel
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Comprehensive learning tools and AI-powered features designed to help you succeed at every level.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-            >
-              <Card className="p-6 h-full hover:shadow-lg transition-shadow">
-                <div className="flex items-center mb-4">
-                  <div className="p-3 bg-blue-100 rounded-lg">
-                    <BookOpen className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 ml-3">AI Course Generation</h3>
-                </div>
-                <p className="text-gray-600">
-                  Generate complete courses with curriculum, lessons, quizzes, flashcards, and mind maps using advanced AI.
-                </p>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
-            >
-              <Card className="p-6 h-full hover:shadow-lg transition-shadow">
-                <div className="flex items-center mb-4">
-                  <div className="p-3 bg-green-100 rounded-lg">
-                    <Users className="h-6 w-6 text-green-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 ml-3">Expert Instructors</h3>
-                </div>
-                <p className="text-gray-600">
-                  Learn from qualified instructors with comprehensive course creation tools and advanced teaching features.
-                </p>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-            >
-              <Card className="p-6 h-full hover:shadow-lg transition-shadow">
-                <div className="flex items-center mb-4">
-                  <div className="p-3 bg-purple-100 rounded-lg">
-                    <Star className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 ml-3">Global Curriculum</h3>
-                </div>
-                <p className="text-gray-600">
-                  Comprehensive academic levels from early childhood to postgraduate with Nigerian and international equivalence.
-                </p>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.3 }}
-            >
-              <Card className="p-6 h-full hover:shadow-lg transition-shadow">
-                <div className="flex items-center mb-4">
-                  <div className="p-3 bg-orange-100 rounded-lg">
-                    <Calendar className="h-6 w-6 text-orange-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 ml-3">Flexible Learning</h3>
-                </div>
-                <p className="text-gray-600">
-                  Learn at your own pace with personalized schedules, progress tracking, and adaptive learning paths.
-                </p>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.4 }}
-            >
-              <Card className="p-6 h-full hover:shadow-lg transition-shadow">
-                <div className="flex items-center mb-4">
-                  <div className="p-3 bg-red-100 rounded-lg">
-                    <Search className="h-6 w-6 text-red-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 ml-3">Smart Search</h3>
-                </div>
-                <p className="text-gray-600">
-                  Advanced search and filtering with school-specific curricula and regional content customization.
-                </p>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.5 }}
-            >
-              <Card className="p-6 h-full hover:shadow-lg transition-shadow">
-                <div className="flex items-center mb-4">
-                  <div className="p-3 bg-teal-100 rounded-lg">
-                    <User className="h-6 w-6 text-teal-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 ml-3">Personal AI Tutor</h3>
-                </div>
-                <p className="text-gray-600">
-                  24/7 AI tutor assistance with personalized explanations, practice questions, and learning support.
-                </p>
-              </Card>
-            </motion.div>
+      {/* Stats Section */}
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+            <div>
+              <div className="text-4xl font-bold text-blue-600 mb-2">{stats.totalCourses}+</div>
+              <div className="text-gray-600">Expert-led Courses</div>
+            </div>
+            <div>
+              <div className="text-4xl font-bold text-green-600 mb-2">{stats.totalStudents}+</div>
+              <div className="text-gray-600">Active Learners</div>
+            </div>
+            <div>
+              <div className="text-4xl font-bold text-purple-600 mb-2">{stats.totalInstructors}+</div>
+              <div className="text-gray-600">Qualified Instructors</div>
+            </div>
           </div>
         </div>
       </section>
+
+      {/* Featured Courses */}
+      {featuredCourses.length > 0 && (
+        <section className="py-16">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">Featured Courses</h2>
+              <p className="text-gray-600">Start learning with our most popular courses</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {featuredCourses.map((course) => (
+                <Card key={course.id} className="hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <div className="aspect-video bg-gradient-to-r from-blue-400 to-purple-500 rounded-lg mb-4 flex items-center justify-center">
+                      <Play className="h-12 w-12 text-white" />
+                    </div>
+                    <CardTitle className="line-clamp-2">{course.title}</CardTitle>
+                    <CardDescription className="line-clamp-2">{course.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center text-sm text-gray-500">
+                        <Users className="h-4 w-4 mr-1" />
+                        {course.enrollmentCount || 0} students
+                      </div>
+                      <div className="flex items-center text-sm text-gray-500">
+                        <Star className="h-4 w-4 mr-1 text-yellow-400" />
+                        {course.rating || 0}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline">{course.difficulty}</Badge>
+                      <Link to={`/course/${course.id}`}>
+                        <Button size="sm">Learn More</Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600">
-        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-3xl md:text-4xl font-bold text-white mb-6"
-          >
-            Ready to Transform Your Learning?
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
-            className="text-xl text-blue-100 mb-8"
-          >
-            Join thousands of learners and educators who are already experiencing the future of education.
-          </motion.p>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
-          >
+      <section className="py-20 bg-blue-600">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-3xl font-bold text-white mb-4">
+            Ready to Start Learning?
+          </h2>
+          <p className="text-xl text-blue-100 mb-8">
+            Join thousands of learners and start your journey today
+          </p>
+          {!user ? (
             <Link to="/auth/register">
-              <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3">
-                Start Your Journey Today
+              <Button size="lg" variant="secondary">
+                Get Started Now
               </Button>
             </Link>
-          </motion.div>
+          ) : (
+            <Link to="/dashboard">
+              <Button size="lg" variant="secondary">
+                Go to Dashboard
+              </Button>
+            </Link>
+          )}
         </div>
       </section>
 
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center mb-4">
-                <BookOpen className="h-8 w-8 text-blue-400" />
-                <span className="ml-2 text-2xl font-bold">ProLearning</span>
-              </div>
-              <p className="text-gray-400 mb-4 max-w-md">
-                Empowering learners worldwide with AI-driven education and comprehensive learning tools 
-                for all academic levels.
+            <div>
+              <h3 className="text-lg font-semibold mb-4">EduLearn</h3>
+              <p className="text-gray-400">
+                Empowering learners worldwide with quality education and expert instruction.
               </p>
             </div>
-            
             <div>
-              <h3 className="text-lg font-semibold mb-4">Platform</h3>
+              <h4 className="font-semibold mb-4">Learn</h4>
               <ul className="space-y-2 text-gray-400">
-                <li><Link to="/marketplace" className="hover:text-white">Marketplace</Link></li>
-                <li><Link to="/auth/register" className="hover:text-white">Get Started</Link></li>
-                <li><Link to="/auth/login" className="hover:text-white">Sign In</Link></li>
+                <li><Link to="/marketplace" className="hover:text-white">Browse Courses</Link></li>
+                <li><Link to="/blog" className="hover:text-white">Blog</Link></li>
+                <li><Link to="/help" className="hover:text-white">Help Center</Link></li>
               </ul>
             </div>
-            
             <div>
-              <h3 className="text-lg font-semibold mb-4">Support</h3>
+              <h4 className="font-semibold mb-4">Teach</h4>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white">Help Center</a></li>
-                <li><a href="#" className="hover:text-white">Contact Us</a></li>
-                <li><a href="#" className="hover:text-white">Privacy Policy</a></li>
+                <li><Link to="/instruct" className="hover:text-white">Become Instructor</Link></li>
+                <li><Link to="/instruct/courses" className="hover:text-white">Create Course</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Support</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li><Link to="/support" className="hover:text-white">Contact Us</Link></li>
+                <li><Link to="/help" className="hover:text-white">FAQ</Link></li>
               </ul>
             </div>
           </div>
-          
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 ProLearning. All rights reserved.</p>
+            <p>&copy; 2024 EduLearn. All rights reserved.</p>
           </div>
         </div>
       </footer>
