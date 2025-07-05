@@ -6,46 +6,60 @@ import { Card } from '@/components/ui/card';
 import { BookOpen, Users, Star, Calendar, Search, User } from 'lucide-react';
 
 const LandingPage = () => {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Navigation */}
-      <nav className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 flex items-center">
-                <BookOpen className="h-8 w-8 text-blue-600" />
-                <span className="ml-2 text-2xl font-bold text-gray-900">ProLearning</span>
-              </div>
-            </div>
-            
-            <div className="hidden md:block">
-              <div className="ml-10 flex items-baseline space-x-4">
-                <Link to="/marketplace" className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
-                  Marketplace
-                </Link>
-                <Link to="#features" className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
-                  Features
-                </Link>
-                <Link to="#pricing" className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
-                  Pricing
-                </Link>
-              </div>
-            </div>
+  const user = authService.getCurrentUser();
 
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Navigation */}
+      <nav className="bg-white shadow-sm">
+        <div className="container mx-auto px-4">
+          <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <Link to="/auth/login">
-                <Button variant="ghost" className="text-gray-600 hover:text-blue-600">
-                  <User className="h-4 w-4 mr-2" />
-                  Sign In
-                </Button>
-              </Link>
-              <Link to="/auth/register">
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                  Get Started
-                </Button>
+              <Link to="/" className="text-2xl font-bold text-blue-600">
+                EduPlatform
               </Link>
             </div>
+            <div className="hidden md:flex items-center space-x-6">
+              <Link to="/marketplace" className="text-gray-600 hover:text-blue-600">
+                Courses
+              </Link>
+              <Link to="/blog" className="text-gray-600 hover:text-blue-600">
+                Blog
+              </Link>
+              <Link to="/help" className="text-gray-600 hover:text-blue-600">
+                Help
+              </Link>
+              {user ? (
+                <div className="flex items-center space-x-4">
+                  <Link to="/dashboard" className="text-gray-600 hover:text-blue-600">
+                    Dashboard
+                  </Link>
+                  {user.role === 'instructor' && (
+                    <Link to="/instruct" className="text-gray-600 hover:text-blue-600">
+                      Teach
+                    </Link>
+                  )}
+                  {user.role === 'super_admin' && (
+                    <Link to="/super-admin" className="text-gray-600 hover:text-blue-600">
+                      Admin
+                    </Link>
+                  )}
+                  <Link to="/support" className="text-gray-600 hover:text-blue-600">
+                    Support
+                  </Link>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-4">
+                  <Link to="/auth/login" className="text-gray-600 hover:text-blue-600">
+                    Login
+                  </Link>
+                  <Link to="/auth/register" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                    Sign Up
+                  </Link>
+                </div>
+              )}
+            </div>
+            <MobileNav />
           </div>
         </div>
       </nav>

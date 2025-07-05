@@ -1,137 +1,125 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { db } from "./lib/github-sdk";
-import { authService, AuthUser } from "./lib/auth";
-import AuthLayout from "./components/auth/AuthLayout";
-import LearnerDashboard from "./pages/dashboard/LearnerDashboard";
-import InstructorDashboard from "./pages/instruct/InstructorDashboard";
-import SuperAdminDashboard from "./pages/super-admin/SuperAdminDashboard";
-import LandingPage from "./pages/LandingPage";
-import CoursePage from "./pages/course/CoursePage";
-import LessonPage from "./pages/lesson/LessonPage";
-import MarketplacePage from "./pages/marketplace/MarketplacePage";
-import CourseDetailsPage from "./pages/course/CourseDetailsPage";
-import CourseViewer from "./components/course/CourseViewer";
-import LessonEditor from "./pages/instruct/LessonEditor";
-import ProtectedRoute from "./components/auth/ProtectedRoute";
-import LoadingScreen from "./components/ui/LoadingScreen";
-import NotFound from "./pages/NotFound";
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
+import LandingPage from './pages/LandingPage';
+import MarketplacePage from './pages/MarketplacePage';
+import CourseDetailsPage from './pages/CourseDetailsPage';
+import BlogArchive from './pages/blog/BlogArchive';
+import BlogPost from './pages/blog/BlogPost';
+import AuthLayout from './layouts/AuthLayout';
+import LearnerDashboard from './pages/learner/LearnerDashboard';
+import MyCourses from './pages/learner/MyCourses';
+import LessonPage from './pages/learner/LessonPage';
+import InstructorDashboard from './pages/instructor/InstructorDashboard';
+import InstructorCourses from './pages/instructor/InstructorCourses';
+import CourseBuilder from './pages/instructor/CourseBuilder';
+import LessonEditor from './pages/instructor/LessonEditor';
+import SuperAdminDashboard from './pages/super_admin/SuperAdminDashboard';
+import NotFound from './pages/NotFound';
+import { ProtectedRoute } from './components/shared/ProtectedRoute';
+import { Toaster } from 'sonner';
+import MobileNav from './components/shared/MobileNav';
+import HelpArchive from './pages/help/HelpArchive';
+import HelpArticle from './pages/help/HelpArticle';
+import SupportTicket from './pages/support/SupportTicket';
 
-const queryClient = new QueryClient();
-
-const App = () => {
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
-
-  useEffect(() => {
-    const initialize = async () => {
-      try {
-        console.log('Initializing GitHub SDK...');
-        await db.initialize();
-        console.log('GitHub SDK initialized successfully');
-        
-        const user = authService.getCurrentUser();
-        setCurrentUser(user);
-        setIsInitialized(true);
-      } catch (error) {
-        console.error('Failed to initialize app:', error);
-        setIsInitialized(true);
-      }
-    };
-
-    initialize();
-  }, []);
-
-  if (!isInitialized) {
-    return <LoadingScreen />;
-  }
-
+function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
+    <Router>
+      <div className="min-h-screen bg-background">
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/marketplace" element={<MarketplacePage />} />
+          <Route path="/course/:id" element={<CourseDetailsPage />} />
+          <Route path="/blog" element={<BlogArchive />} />
+          <Route path="/blog/:slug" element={<BlogPost />} />
+          <Route path="/help" element={<HelpArchive />} />
+          <Route path="/help/:slug" element={<HelpArticle />} />
+          
+          {/* Auth Routes */}
+          <Route path="/auth/*" element={<AuthLayout />} />
+          
+          {/* Protected Routes */}
+          <Route 
+            path="/dashboard" 
+            element={
+              <ProtectedRoute>
+                <LearnerDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/my-courses" 
+            element={
+              <ProtectedRoute>
+                <MyCourses />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/course/:courseId/lesson/:lessonId" 
+            element={
+              <ProtectedRoute>
+                <LessonPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/instruct" 
+            element={
+              <ProtectedRoute allowedRoles={['instructor', 'super_admin']}>
+                <InstructorDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/instruct/courses" 
+            element={
+              <ProtectedRoute allowedRoles={['instructor', 'super_admin']}>
+                <InstructorCourses />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/instruct/course-builder" 
+            element={
+              <ProtectedRoute allowedRoles={['instructor', 'super_admin']}>
+                <CourseBuilder />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/instruct/course/:courseId/lesson/:lessonId/edit" 
+            element={
+              <ProtectedRoute allowedRoles={['instructor', 'super_admin']}>
+                <LessonEditor />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/support" 
+            element={
+              <ProtectedRoute>
+                <SupportTicket />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/super-admin" 
+            element={
+              <ProtectedRoute allowedRoles={['super_admin']}>
+                <SuperAdminDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Fallback */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
         <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/auth/*" element={<AuthLayout />} />
-            <Route path="/marketplace" element={<MarketplacePage />} />
-            <Route path="/course/:id" element={<CourseDetailsPage />} />
-            
-            {/* Protected Learner Routes */}
-            <Route 
-              path="/dashboard/*" 
-              element={
-                <ProtectedRoute allowedRoles={['learner']}>
-                  <LearnerDashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/my-course/:id" 
-              element={
-                <ProtectedRoute allowedRoles={['learner']}>
-                  <CourseViewer />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/lesson/:id" 
-              element={
-                <ProtectedRoute allowedRoles={['learner']}>
-                  <LessonPage />
-                </ProtectedRoute>
-              } 
-            />
-            
-            {/* Protected Instructor Routes */}
-            <Route 
-              path="/instruct/*" 
-              element={
-                <ProtectedRoute allowedRoles={['instructor']}>
-                  <InstructorDashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/instruct/courses/:courseId/lessons/new" 
-              element={
-                <ProtectedRoute allowedRoles={['instructor']}>
-                  <LessonEditor />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/instruct/courses/:courseId/lessons/:lessonId/edit" 
-              element={
-                <ProtectedRoute allowedRoles={['instructor']}>
-                  <LessonEditor />
-                </ProtectedRoute>
-              } 
-            />
-            
-            {/* Protected Super Admin Routes */}
-            <Route 
-              path="/super-admin/*" 
-              element={
-                <ProtectedRoute allowedRoles={['super_admin']}>
-                  <SuperAdminDashboard />
-                </ProtectedRoute>
-              } 
-            />
-            
-            {/* Catch all route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+      </div>
+    </Router>
   );
-};
+}
 
 export default App;

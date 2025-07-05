@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Eye, ArrowLeft, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Eye, ArrowLeft, Calendar, User, MessageCircle } from 'lucide-react';
 import { db } from '@/lib/github-sdk';
 import ReactMarkdown from 'react-markdown';
 
@@ -12,7 +13,6 @@ const HelpArticle = () => {
   const [article, setArticle] = useState<any>(null);
   const [relatedArticles, setRelatedArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hasVoted, setHasVoted] = useState(false);
 
   useEffect(() => {
     if (slug) {
@@ -78,28 +78,6 @@ const HelpArticle = () => {
     return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
   };
 
-  const handleVote = async (helpful: boolean) => {
-    if (!article || hasVoted) return;
-
-    try {
-      const updateField = helpful ? 'helpful' : 'notHelpful';
-      const currentCount = article[updateField] || 0;
-      
-      await db.update('helpArticles', article.id, {
-        [updateField]: currentCount + 1
-      });
-
-      setArticle(prev => ({
-        ...prev,
-        [updateField]: currentCount + 1
-      }));
-      
-      setHasVoted(true);
-    } catch (error) {
-      console.error('Error voting on article:', error);
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
@@ -147,16 +125,26 @@ const HelpArticle = () => {
             </Link>
           </div>
 
-          {/* Article */}
+          {/* Help Article */}
           <Card className="mb-8">
             <CardContent className="p-8">
               {/* Article Header */}
               <div className="mb-6">
                 <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
                   <div className="flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    {new Date(article.createdAt).toLocaleDateString()}
+                  </div>
+                  <div className="flex items-center gap-1">
                     <Eye className="h-4 w-4" />
                     {article.viewCount || 0} views
                   </div>
+                  {article.author && (
+                    <div className="flex items-center gap-1">
+                      <User className="h-4 w-4" />
+                      {article.author}
+                    </div>
+                  )}
                 </div>
 
                 <h1 className="text-4xl font-bold text-gray-900 mb-4">{article.title}</h1>
@@ -170,36 +158,19 @@ const HelpArticle = () => {
               </div>
 
               {/* Article Content */}
-              <div className="prose max-w-none mb-8">
+              <div className="prose max-w-none">
                 <ReactMarkdown>{article.content}</ReactMarkdown>
               </div>
 
-              {/* Feedback Section */}
-              <div className="border-t pt-6">
-                <h3 className="text-lg font-semibold mb-4">Was this article helpful?</h3>
-                <div className="flex gap-4 items-center">
-                  <Button
-                    variant={hasVoted ? "secondary" : "outline"}
-                    size="sm"
-                    onClick={() => handleVote(true)}
-                    disabled={hasVoted}
-                  >
-                    <ThumbsUp className="h-4 w-4 mr-2" />
-                    Yes ({article.helpful || 0})
+              {/* Contact Support */}
+              <div className="mt-8 p-4 bg-blue-50 rounded-lg">
+                <p className="text-gray-700 mb-4">Still need help? Contact our support team.</p>
+                <Link to="/support">
+                  <Button>
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    Contact Support
                   </Button>
-                  <Button
-                    variant={hasVoted ? "secondary" : "outline"}
-                    size="sm"
-                    onClick={() => handleVote(false)}
-                    disabled={hasVoted}
-                  >
-                    <ThumbsDown className="h-4 w-4 mr-2" />
-                    No ({article.notHelpful || 0})
-                  </Button>
-                  {hasVoted && (
-                    <span className="text-sm text-gray-600">Thank you for your feedback!</span>
-                  )}
-                </div>
+                </Link>
               </div>
             </CardContent>
           </Card>
@@ -221,7 +192,7 @@ const HelpArticle = () => {
                         </Link>
                       </h3>
                       <p className="text-gray-600 text-sm line-clamp-2">
-                        {relatedArticle.content.substring(0, 100) + '...'}
+                        {relatedArticle.content?.substring(0, 100) + '...'}
                       </p>
                       <div className="mt-2">
                         <Badge variant="outline">{relatedArticle.category}</Badge>
