@@ -6,11 +6,34 @@ class GitHubDatabase {
   private initialized = false;
   private tables: Record<string, any[]> = {};
   private sessions: Map<string, { user: any; expiresAt: number }> = new Map();
+  private storage: Storage;
+
+  constructor() {
+    this.storage = typeof window !== 'undefined' ? window.localStorage : {
+      getItem: () => null,
+      setItem: () => {},
+      removeItem: () => {},
+      clear: () => {},
+      length: 0,
+      key: () => null
+    } as Storage;
+  }
 
   async initialize() {
     if (this.initialized) return;
     
     console.log('Initializing GitHub SDK...');
+    
+    // Load existing data from localStorage
+    const storedData = this.storage.getItem('github_sdk_data');
+    if (storedData) {
+      try {
+        this.tables = JSON.parse(storedData);
+        console.log('Loaded existing data from localStorage');
+      } catch (error) {
+        console.warn('Failed to load stored data, initializing fresh');
+      }
+    }
     
     // Initialize all tables with proper schema if they don't exist
     if (!this.tables.users) this.tables.users = [];
@@ -38,10 +61,6 @@ class GitHubDatabase {
     if (!this.tables.wallets) this.tables.wallets = [];
     if (!this.tables.aiGenerationUsage) this.tables.aiGenerationUsage = [];
     if (!this.tables.ticketReplies) this.tables.ticketReplies = [];
-    if (!this.tables.paystackTransactions) this.tables.paystackTransactions = [];
-    if (!this.tables.withdrawalRequests) this.tables.withdrawalRequests = [];
-    if (!this.tables.earnings) this.tables.earnings = [];
-    if (!this.tables.transactions) this.tables.transactions = [];
 
     // Initialize reference data
     if (!this.tables.academicLevels || this.tables.academicLevels.length === 0) {
@@ -67,8 +86,30 @@ class GitHubDatabase {
       ];
     }
 
+    // Load sessions from localStorage
+    const storedSessions = this.storage.getItem('github_sdk_sessions');
+    if (storedSessions) {
+      try {
+        const sessionData = JSON.parse(storedSessions);
+        this.sessions = new Map(sessionData);
+        console.log('Loaded existing sessions from localStorage');
+      } catch (error) {
+        console.warn('Failed to load stored sessions');
+      }
+    }
+
     this.initialized = true;
     console.log('GitHub SDK initialized successfully');
+    this.persistData();
+  }
+
+  private persistData() {
+    try {
+      this.storage.setItem('github_sdk_data', JSON.stringify(this.tables));
+      this.storage.setItem('github_sdk_sessions', JSON.stringify([...this.sessions.entries()]));
+    } catch (error) {
+      console.warn('Failed to persist data to localStorage:', error);
+    }
   }
 
   async insert(table: string, data: any) {
@@ -87,6 +128,7 @@ class GitHubDatabase {
     
     this.tables[table].push(item);
     console.log(`Inserted into ${table}:`, item);
+    this.persistData();
     return item;
   }
 
@@ -104,6 +146,7 @@ class GitHubDatabase {
     };
     
     console.log(`Updated ${table} ${id}:`, this.tables[table][index]);
+    this.persistData();
     return this.tables[table][index];
   }
 
@@ -116,6 +159,7 @@ class GitHubDatabase {
     
     this.tables[table].splice(index, 1);
     console.log(`Deleted from ${table}: ${id}`);
+    this.persistData();
     return true;
   }
 
@@ -187,6 +231,7 @@ class GitHubDatabase {
       expiresAt
     });
 
+    this.persistData();
     return token;
   }
 
@@ -195,6 +240,7 @@ class GitHubDatabase {
     if (!session || session.expiresAt < Date.now()) {
       if (session) {
         this.sessions.delete(token);
+        this.persistData();
       }
       return null;
     }
@@ -211,7 +257,11 @@ class GitHubDatabase {
   }
 
   destroySession(token: string): boolean {
-    return this.sessions.delete(token);
+    const deleted = this.sessions.delete(token);
+    if (deleted) {
+      this.persistData();
+    }
+    return deleted;
   }
 
   hashPassword(password: string): string {
@@ -234,6 +284,8 @@ class GitHubDatabase {
   async clearAll() {
     this.tables = {};
     this.sessions.clear();
+    this.storage.removeItem('github_sdk_data');
+    this.storage.removeItem('github_sdk_sessions');
     this.initialized = false;
     await this.initialize();
   }
