@@ -9,8 +9,6 @@ export interface AuthUser {
   avatar?: string;
   country?: string;
   currency?: string;
-  isActive?: boolean;
-  status?: string;
 }
 
 class AuthService {
@@ -38,7 +36,7 @@ class AuthService {
         throw new Error('Failed to get user data');
       }
 
-      if (!user.isActive || user.status !== 'active') {
+      if (!user.isActive) {
         console.log('[AUTH DEBUG] Account is deactivated');
         throw new Error('Account is deactivated');
       }
@@ -51,9 +49,7 @@ class AuthService {
         role: user.role as 'learner' | 'instructor' | 'super_admin',
         avatar: user.avatar,
         country: user.country,
-        currency: user.currency,
-        isActive: user.isActive,
-        status: user.status
+        currency: user.currency
       };
 
       this.currentToken = token;
@@ -89,7 +85,6 @@ class AuthService {
         country: userData.country,
         currency: currency,
         isActive: true,
-        status: 'active',
         profileComplete: false
       });
 
@@ -133,9 +128,7 @@ class AuthService {
         role: user.role,
         avatar: user.avatar,
         country: user.country,
-        currency: user.currency,
-        isActive: user.isActive,
-        status: user.status
+        currency: user.currency
       };
 
       localStorage.setItem('auth_user', JSON.stringify(this.currentUser));
