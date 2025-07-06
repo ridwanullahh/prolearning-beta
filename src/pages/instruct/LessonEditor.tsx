@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/github-sdk';
 import { authService } from '@/lib/auth';
 import { ArrowLeft, Save, Plus, Trash2, GripVertical, Upload } from 'lucide-react';
-import { Editor } from '@tinymce/tinymce-react';
+import RichTextEditor from '@/components/shared/RichTextEditor';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
 interface ContentBlock {
@@ -768,21 +768,11 @@ const LessonEditor = () => {
                                   {block.type === 'text' && (
                                     <div>
                                       <Label>Content (Markdown supported)</Label>
-                                      <Editor
-                                        apiKey="your-tinymce-api-key" // Replace with your TinyMCE API key
+                                      <RichTextEditor
                                         value={block.content}
-                                        onEditorChange={(content) => updateContentBlock(block.id, { content })}
-                                        init={{
-                                          height: 300,
-                                          menubar: false,
-                                          plugins: [
-                                            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap',
-                                            'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                                            'insertdatetime', 'media', 'table', 'preview', 'help', 'wordcount'
-                                          ],
-                                          toolbar: 'undo redo | blocks | bold italic forecolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help',
-                                          content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }'
-                                        }}
+                                        onChange={(content) => updateContentBlock(block.id, { content })}
+                                        placeholder="Enter your content here..."
+                                        height="300px"
                                       />
                                     </div>
                                   )}

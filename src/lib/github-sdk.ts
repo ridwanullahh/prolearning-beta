@@ -1,121 +1,112 @@
-
 import { config } from './config';
+import UniversalSDK from './universal-sdk';
 import CryptoJS from 'crypto-js';
 
 class GitHubDatabase {
+  private sdk: UniversalSDK;
   private initialized = false;
-  private tables: Record<string, any[]> = {};
   private sessions: Map<string, { user: any; expiresAt: number }> = new Map();
+
+  constructor() {
+    this.sdk = new UniversalSDK({
+      owner: config.github.owner,
+      repo: config.github.repo,
+      token: config.github.token,
+      branch: 'main',
+      basePath: 'data',
+      mediaPath: 'media'
+    });
+  }
 
   async initialize() {
     if (this.initialized) return;
     
     console.log('Initializing GitHub SDK...');
     
-    // Initialize all tables with proper schema
-    this.tables = {
-      users: [],
-      courses: [],
-      lessons: [],
-      lessonContents: [],
-      quizzes: [],
-      quizAttempts: [],
-      flashcards: [],
-      keyPoints: [],
-      mindMaps: [],
-      enrollments: [],
-      userProgress: [],
-      academicLevels: [
-        { id: '1', name: 'Elementary School', description: 'Grades K-5', order: 1 },
-        { id: '2', name: 'Middle School', description: 'Grades 6-8', order: 2 },
-        { id: '3', name: 'High School', description: 'Grades 9-12', order: 3 },
-        { id: '4', name: 'University', description: 'Undergraduate level', order: 4 },
-        { id: '5', name: 'Graduate', description: 'Graduate level', order: 5 }
-      ],
-      subjects: [
-        { id: '1', name: 'Mathematics', description: 'Math and calculations' },
-        { id: '2', name: 'Science', description: 'Natural sciences' },
-        { id: '3', name: 'English', description: 'Language and literature' },
-        { id: '4', name: 'History', description: 'Historical studies' },
-        { id: '5', name: 'Computer Science', description: 'Programming and technology' }
-      ],
-      walletTransactions: [],
-      userWallets: [],
-      instructorEarnings: [],
-      instructorWithdrawals: [],
-      blogPosts: [],
-      helpArticles: [],
-      supportTickets: [],
-      ticketMessages: [],
-      courseGenerationJobs: [],
-      mediaUploads: [],
-      userProfiles: [],
-      wallets: [],
-      aiGenerationUsage: [],
-      ticketReplies: []
-    };
+    try {
+      await this.sdk.init();
+      
+      // Initialize default data for static tables
+      const academicLevels = await this.sdk.get('academicLevels');
+      if (academicLevels.length === 0) {
+        await this.sdk.bulkInsert('academicLevels', [
+          { name: 'Elementary School', description: 'Grades K-5', order: 1 },
+          { name: 'Middle School', description: 'Grades 6-8', order: 2 },
+          { name: 'High School', description: 'Grades 9-12', order: 3 },
+          { name: 'University', description: 'Undergraduate level', order: 4 },
+          { name: 'Graduate', description: 'Graduate level', order: 5 }
+        ]);
+      }
 
-    this.initialized = true;
-    console.log('GitHub SDK initialized successfully');
+      const subjects = await this.sdk.get('subjects');
+      if (subjects.length === 0) {
+        await this.sdk.bulkInsert('subjects', [
+          { name: 'Mathematics', description: 'Math and calculations' },
+          { name: 'Science', description: 'Natural sciences' },
+          { name: 'English', description: 'Language and literature' },
+          { name: 'History', description: 'Historical studies' },
+          { name: 'Computer Science', description: 'Programming and technology' }
+        ]);
+      }
+
+      this.initialized = true;
+      console.log('GitHub SDK initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize GitHub SDK:', error);
+      throw error;
+    }
   }
 
   async insert(table: string, data: any) {
     await this.initialize();
-    const id = this.generateId();
     const item = {
-      id,
       ...data,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
     
-    if (!this.tables[table]) {
-      this.tables[table] = [];
-    }
-    
-    this.tables[table].push(item);
-    console.log(`Inserted into ${table}:`, item);
-    return item;
+    const result = await this.sdk.insert(table, item);
+    console.log(`Inserted into ${table}:`, result);
+    return result;
   }
 
   async update(table: string, id: string, data: any) {
     await this.initialize();
-    if (!this.tables[table]) return null;
-    
-    const index = this.tables[table].findIndex((item: any) => item.id === id);
-    if (index === -1) return null;
-    
-    this.tables[table][index] = {
-      ...this.tables[table][index],
-      ...data,
-      updatedAt: new Date().toISOString()
-    };
-    
-    console.log(`Updated ${table} ${id}:`, this.tables[table][index]);
-    return this.tables[table][index];
+    try {
+      const updatedData = {
+        ...data,
+        updatedAt: new Date().toISOString()
+      };
+      
+      const result = await this.sdk.update(table, id, updatedData);
+      console.log(`Updated ${table} ${id}:`, result);
+      return result;
+    } catch (error) {
+      console.error(`Error updating ${table} ${id}:`, error);
+      return null;
+    }
   }
 
   async delete(table: string, id: string) {
     await this.initialize();
-    if (!this.tables[table]) return false;
-    
-    const index = this.tables[table].findIndex((item: any) => item.id === id);
-    if (index === -1) return false;
-    
-    this.tables[table].splice(index, 1);
-    console.log(`Deleted from ${table}: ${id}`);
-    return true;
+    try {
+      await this.sdk.delete(table, id);
+      console.log(`Deleted from ${table}: ${id}`);
+      return true;
+    } catch (error) {
+      console.error(`Error deleting from ${table}:`, error);
+      return false;
+    }
   }
 
   async get(table: string) {
     await this.initialize();
-    return this.tables[table] || [];
+    return await this.sdk.get(table);
   }
 
   async getItem(table: string, id: string) {
     await this.initialize();
-    if (!this.tables[table]) return null;
-    return this.tables[table].find((item: any) => item.id === id) || null;
+    return await this.sdk.getItem(table, id);
   }
 
   queryBuilder(table: string) {
@@ -125,7 +116,7 @@ class GitHubDatabase {
   // Authentication methods
   async register(email: string, password: string, profile: any = {}): Promise<any> {
     await this.initialize();
-    const users = this.tables.users;
+    const users = await this.sdk.get('users');
     const existingUser = users.find((u: any) => u.email === email);
     
     if (existingUser) {
@@ -133,7 +124,7 @@ class GitHubDatabase {
     }
 
     const hashedPassword = this.hashPassword(password);
-    const user = await this.insert('users', {
+    const user = await this.sdk.insert('users', {
       email,
       password: hashedPassword,
       name: profile.name || email.split('@')[0],
@@ -147,7 +138,7 @@ class GitHubDatabase {
 
   async login(email: string, password: string): Promise<string> {
     await this.initialize();
-    const users = this.tables.users;
+    const users = await this.sdk.get('users');
     const user = users.find((u: any) => u.email === email);
     
     if (!user || !this.verifyPassword(password, user.password)) {
