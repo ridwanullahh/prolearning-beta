@@ -1,265 +1,432 @@
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Users, 
-  BookOpen, 
-  DollarSign, 
-  TrendingUp,
-  UserCheck,
-  UserX,
-  Eye,
-  Edit,
-  Trash2
-} from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Users, BookOpen, DollarSign, TrendingUp, Shield, Settings, CreditCard, Wallet } from 'lucide-react';
+import { authService } from '@/lib/auth';
 import { db } from '@/lib/github-sdk';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
+
+interface DashboardStats {
+  totalUsers: number;
+  totalInstructors: number;
+  totalCourses: number;
+  totalRevenue: number;
+  monthlyRevenue: number;
+  pendingWithdrawals: number;
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  createdAt: string;
+  lastLoginAt?: string;
+}
+
+interface WithdrawalRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  amount: number;
+  currency: string;
+  bankDetails: string;
+  status: string;
+  createdAt: string;
+}
 
 const SuperAdminDashboard = () => {
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
+    totalInstructors: 0,
     totalCourses: 0,
     totalRevenue: 0,
-    activeUsers: 0
+    monthlyRevenue: 0,
+    pendingWithdrawals: 0
   });
-  const [recentUsers, setRecentUsers] = useState<any[]>([]);
-  const [recentCourses, setRecentCourses] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+
+  const user = authService.getCurrentUser();
 
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    if (user) {
+      loadDashboardData();
+    }
+  }, [user]);
 
   const loadDashboardData = async () => {
     try {
-      const [users, courses, enrollments] = await Promise.all([
-        db.get('users'),
-        db.get('courses'),
-        db.get('enrollments')
-      ]);
+      // Load all users
+      const allUsers = await db.get('users');
+      const instructors = allUsers.filter(u => u.role === 'instructor');
+      
+      // Load all courses
+      const allCourses = await db.get('courses');
+      
+      // Load all earnings
+      const allEarnings = await db.get('earnings');
+      const totalRevenue = allEarnings.reduce((sum, earning) => sum + earning.netAmount, 0);
+      
+      // Calculate monthly revenue
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const monthlyEarnings = allEarnings.filter(earning => earning.createdAt.startsWith(currentMonth));
+      const monthlyRevenue = monthlyEarnings.reduce((sum, earning) => sum + earning.netAmount, 0);
+      
+      // Load pending withdrawals
+      const pendingWithdrawals = await db.queryBuilder('withdrawalRequests')
+        .where(item => item.status === 'pending')
+        .exec();
 
-      // Calculate stats
-      const totalRevenue = enrollments.reduce((sum: number, enrollment: any) => {
-        return sum + (enrollment.amount || 0);
-      }, 0);
-
-      const activeUsers = users.filter((user: any) => 
-        new Date(user.lastLoginAt || user.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-      ).length;
+      const enrichedWithdrawals = await Promise.all(
+        pendingWithdrawals.map(async (withdrawal: any) => {
+          const user = await db.getItem('users', withdrawal.userId);
+          return {
+            ...withdrawal,
+            userName: user?.name || 'Unknown User'
+          };
+        })
+      );
 
       setStats({
-        totalUsers: users.length,
-        totalCourses: courses.length,
+        totalUsers: allUsers.length,
+        totalInstructors: instructors.length,
+        totalCourses: allCourses.length,
         totalRevenue,
-        activeUsers
+        monthlyRevenue,
+        pendingWithdrawals: pendingWithdrawals.length
       });
 
-      // Get recent users and courses
-      setRecentUsers(users.slice(-5).reverse());
-      setRecentCourses(courses.slice(-5).reverse());
+      setUsers(allUsers);
+      setWithdrawalRequests(enrichedWithdrawals);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
+      toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleUserStatus = async (userId: string, currentStatus: string) => {
+  const handleApproveWithdrawal = async (withdrawalId: string) => {
     try {
-      const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
-      await db.update('users', userId, { status: newStatus });
-      
-      toast({
-        title: 'Success',
-        description: `User ${newStatus === 'suspended' ? 'suspended' : 'activated'} successfully`,
+      await db.update('withdrawalRequests', withdrawalId, {
+        status: 'approved',
+        processedAt: new Date().toISOString()
       });
       
+      toast.success('Withdrawal approved successfully');
       loadDashboardData();
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update user status',
-        variant: 'destructive'
-      });
+      console.error('Error approving withdrawal:', error);
+      toast.error('Failed to approve withdrawal');
     }
   };
 
-  const toggleCourseStatus = async (courseId: string, currentStatus: boolean) => {
+  const handleRejectWithdrawal = async (withdrawalId: string, reason: string) => {
     try {
-      await db.update('courses', courseId, { isPublished: !currentStatus });
-      
-      toast({
-        title: 'Success',
-        description: `Course ${currentStatus ? 'unpublished' : 'published'} successfully`,
+      await db.update('withdrawalRequests', withdrawalId, {
+        status: 'rejected',
+        processedAt: new Date().toISOString(),
+        rejectionReason: reason
       });
       
+      // Return money to user's available balance
+      const withdrawal = withdrawalRequests.find(w => w.id === withdrawalId);
+      if (withdrawal) {
+        const userWallet = await db.queryBuilder('wallets')
+          .where(item => item.userId === withdrawal.userId)
+          .exec();
+        
+        if (userWallet.length > 0) {
+          const wallet = userWallet[0];
+          await db.update('wallets', wallet.id, {
+            balance: (wallet.balance || 0) + withdrawal.amount,
+            pendingBalance: (wallet.pendingBalance || 0) - withdrawal.amount
+          });
+        }
+      }
+      
+      toast.success('Withdrawal rejected');
       loadDashboardData();
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update course status',
-        variant: 'destructive'
-      });
+      console.error('Error rejecting withdrawal:', error);
+      toast.error('Failed to reject withdrawal');
     }
+  };
+
+  const handleUserStatusToggle = async (userId: string, currentStatus: string) => {
+    try {
+      const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+      await db.update('users', userId, { status: newStatus });
+      
+      toast.success(`User ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`);
+      loadDashboardData();
+    } catch (error) {
+      console.error('Error updating user status:', error);
+      toast.error('Failed to update user status');
+    }
+  };
+
+  const formatCurrency = (amount: number, currency: string = 'USD') => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency
+    }).format(amount);
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100">
-      <div className="container mx-auto px-4 py-6">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Super Admin Dashboard</h1>
-          <p className="text-gray-600">Manage your learning platform</p>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-              <Users className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{stats.totalUsers}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats.activeUsers} active in last 30 days
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
-              <BookOpen className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.totalCourses}</div>
-              <p className="text-xs text-muted-foreground">
-                Published and draft courses
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-              <DollarSign className="h-4 w-4 text-purple-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-purple-600">
-                ${stats.totalRevenue.toFixed(2)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                From course enrollments
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-              <TrendingUp className="h-4 w-4 text-orange-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{stats.activeUsers}</div>
-              <p className="text-xs text-muted-foreground">
-                In the last 30 days
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recent Users */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Users</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentUsers.map((user) => (
-                  <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex-1">
-                      <div className="font-medium">{user.name}</div>
-                      <div className="text-sm text-gray-600">{user.email}</div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline">{user.role}</Badge>
-                        <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
-                          {user.status || 'active'}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => toggleUserStatus(user.id, user.status || 'active')}
-                      >
-                        {user.status === 'suspended' ? (
-                          <UserCheck className="h-4 w-4" />
-                        ) : (
-                          <UserX className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Recent Courses */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Courses</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentCourses.map((course) => (
-                  <div key={course.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex-1">
-                      <div className="font-medium line-clamp-1">{course.title}</div>
-                      <div className="text-sm text-gray-600 line-clamp-1">{course.description}</div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline">{course.difficulty}</Badge>
-                        <Badge variant={course.isPublished ? 'default' : 'secondary'}>
-                          {course.isPublished ? 'Published' : 'Draft'}
-                        </Badge>
-                        {course.isAiGenerated && (
-                          <Badge className="bg-purple-100 text-purple-800">AI Generated</Badge>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => toggleCourseStatus(course.id, course.isPublished)}
-                      >
-                        {course.isPublished ? 'Unpublish' : 'Publish'}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+    <div className="space-y-6">
+      <div className="flex items-center gap-2">
+        <Shield className="h-6 w-6 text-purple-600" />
+        <h1 className="text-2xl font-bold">Super Admin Dashboard</h1>
       </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalUsers}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Instructors</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalInstructors}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
+            <BookOpen className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalCourses}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {formatCurrency(stats.totalRevenue)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">
+              {formatCurrency(stats.monthlyRevenue)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Withdrawals</CardTitle>
+            <Wallet className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-600">
+              {stats.pendingWithdrawals}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Tabs defaultValue="users" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="users">Users Management</TabsTrigger>
+          <TabsTrigger value="withdrawals">Withdrawal Requests</TabsTrigger>
+          <TabsTrigger value="settings">Platform Settings</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="users">
+          <Card>
+            <CardHeader>
+              <CardTitle>Users Management</CardTitle>
+              <CardDescription>Manage platform users and their permissions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {users.map((user) => (
+                  <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{user.name}</span>
+                        <Badge className={
+                          user.role === 'super_admin' ? 'bg-purple-100 text-purple-800' :
+                          user.role === 'instructor' ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-800'
+                        }>
+                          {user.role}
+                        </Badge>
+                        <Badge className={
+                          user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }>
+                          {user.status}
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-gray-500 mt-1">
+                        {user.email} • Joined {new Date(user.createdAt).toLocaleDateString()}
+                        {user.lastLoginAt && ` • Last login ${new Date(user.lastLoginAt).toLocaleDateString()}`}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleUserStatusToggle(user.id, user.status)}
+                        disabled={user.role === 'super_admin'}
+                      >
+                        {user.status === 'active' ? 'Deactivate' : 'Activate'}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="withdrawals">
+          <Card>
+            <CardHeader>
+              <CardTitle>Withdrawal Requests</CardTitle>
+              <CardDescription>Review and process instructor withdrawal requests</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {withdrawalRequests.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No pending withdrawal requests
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {withdrawalRequests.map((request) => (
+                    <div key={request.id} className="p-4 border rounded-lg">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="font-medium">{request.userName}</span>
+                            <Badge className="bg-yellow-100 text-yellow-800">
+                              {request.status}
+                            </Badge>
+                          </div>
+                          <div className="text-lg font-bold text-green-600 mb-2">
+                            {formatCurrency(request.amount, request.currency)}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            Requested: {new Date(request.createdAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="mb-4">
+                        <h4 className="font-medium mb-2">Bank Details:</h4>
+                        <pre className="text-sm bg-gray-50 p-3 rounded border whitespace-pre-wrap">
+                          {request.bankDetails}
+                        </pre>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => handleApproveWithdrawal(request.id)}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            const reason = prompt('Enter rejection reason:');
+                            if (reason) {
+                              handleRejectWithdrawal(request.id, reason);
+                            }
+                          }}
+                          className="border-red-600 text-red-600 hover:bg-red-50"
+                        >
+                          Reject
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Platform Settings
+              </CardTitle>
+              <CardDescription>Configure platform-wide settings</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-semibold mb-2">Payment Configuration</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Configure Paystack payment settings for wallet funding and course purchases
+                  </p>
+                  <Button variant="outline">
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Configure Paystack
+                  </Button>
+                </div>
+                
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-semibold mb-2">Commission Settings</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Current platform commission: 15% per course sale
+                  </p>
+                  <Button variant="outline">Update Commission Rate</Button>
+                </div>
+                
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-semibold mb-2">System Maintenance</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Perform system maintenance and data cleanup
+                  </p>
+                  <Button variant="outline">System Tools</Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

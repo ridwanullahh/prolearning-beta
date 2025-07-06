@@ -57,10 +57,6 @@ class AuthService {
       };
 
       this.currentToken = token;
-
-      // Store in localStorage for persistence
-      localStorage.setItem('auth_user', JSON.stringify(this.currentUser));
-      localStorage.setItem('auth_token', token);
       
       console.log('[AUTH DEBUG] Login successful for user:', this.currentUser.id);
       return this.currentUser;
@@ -109,7 +105,10 @@ class AuthService {
       await db.insert('wallets', {
         userId: user.id,
         balance: 0,
-        currency: currency || 'USD'
+        currency: currency || 'USD',
+        totalEarnings: 0,
+        totalWithdrawals: 0,
+        pendingBalance: 0
       });
 
       // Initialize AI generation usage for current month
@@ -137,9 +136,6 @@ class AuthService {
         isActive: user.isActive,
         status: user.status
       };
-
-      localStorage.setItem('auth_user', JSON.stringify(this.currentUser));
-      localStorage.setItem('auth_token', token);
       
       console.log('[AUTH DEBUG] Registration successful for user:', this.currentUser.id);
       return this.currentUser;
@@ -156,34 +152,12 @@ class AuthService {
     }
     this.currentUser = null;
     this.currentToken = null;
-    localStorage.removeItem('auth_user');
-    localStorage.removeItem('auth_token');
     console.log('[AUTH DEBUG] Logout complete');
   }
 
   getCurrentUser(): AuthUser | null {
     if (this.currentUser) {
       return this.currentUser;
-    }
-
-    // Try to restore from localStorage
-    const stored = localStorage.getItem('auth_user');
-    const token = localStorage.getItem('auth_token');
-    
-    if (stored && token) {
-      try {
-        const session = db.getSession(token);
-        if (session) {
-          this.currentUser = JSON.parse(stored);
-          this.currentToken = token;
-          console.log('[AUTH DEBUG] Restored user from localStorage:', this.currentUser.id);
-          return this.currentUser;
-        }
-      } catch {
-        localStorage.removeItem('auth_user');
-        localStorage.removeItem('auth_token');
-        console.log('[AUTH DEBUG] Invalid stored session, cleared localStorage');
-      }
     }
 
     return null;
@@ -199,7 +173,7 @@ class AuthService {
   }
 
   getCurrentToken(): string | null {
-    return this.currentToken || localStorage.getItem('auth_token');
+    return this.currentToken;
   }
 
   private getCurrencyByCountry(country?: string): string {

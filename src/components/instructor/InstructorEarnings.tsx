@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { DollarSign, TrendingUp, Clock, ArrowUpRight } from 'lucide-react';
@@ -36,6 +37,8 @@ interface Withdrawal {
   status: string;
   createdAt: string;
   bankDetails?: string;
+  processedAt?: string;
+  rejectionReason?: string;
 }
 
 const InstructorEarnings = () => {
@@ -59,7 +62,7 @@ const InstructorEarnings = () => {
 
   const loadEarningsData = async () => {
     try {
-      const allEarnings = await db.queryBuilder('instructorEarnings')
+      const allEarnings = await db.queryBuilder('earnings')
         .where((earning: any) => earning.instructorId === user!.id)
         .exec();
 
@@ -67,11 +70,11 @@ const InstructorEarnings = () => {
         .where((wallet: any) => wallet.userId === user!.id)
         .exec();
 
-      const totalEarnings = allEarnings.reduce((sum: number, earning: any) => sum + earning.amount, 0);
+      const totalEarnings = allEarnings.reduce((sum: number, earning: any) => sum + earning.netAmount, 0);
       const currentMonth = new Date().toISOString().slice(0, 7);
       const monthlyEarnings = allEarnings
         .filter((earning: any) => earning.createdAt.startsWith(currentMonth))
-        .reduce((sum: number, earning: any) => sum + earning.amount, 0);
+        .reduce((sum: number, earning: any) => sum + earning.netAmount, 0);
 
       const walletData = wallet[0];
       
@@ -92,14 +95,14 @@ const InstructorEarnings = () => {
 
   const loadEarningHistory = async () => {
     try {
-      const earnings = await db.queryBuilder('instructorEarnings')
+      const earningsData = await db.queryBuilder('earnings')
         .where((earning: any) => earning.instructorId === user!.id)
         .orderBy('createdAt', 'desc')
         .exec();
 
       // Get course titles
       const enrichedEarnings = await Promise.all(
-        earnings.map(async (earning: any) => {
+        earningsData.map(async (earning: any) => {
           const course = await db.getItem('courses', earning.courseId);
           return {
             ...earning,
@@ -116,8 +119,8 @@ const InstructorEarnings = () => {
 
   const loadWithdrawalHistory = async () => {
     try {
-      const withdrawals = await db.queryBuilder('instructorWithdrawals')
-        .where((withdrawal: any) => withdrawal.instructorId === user!.id)
+      const withdrawals = await db.queryBuilder('withdrawalRequests')
+        .where((withdrawal: any) => withdrawal.userId === user!.id)
         .orderBy('createdAt', 'desc')
         .exec();
 
@@ -147,13 +150,12 @@ const InstructorEarnings = () => {
     setProcessing(true);
     try {
       // Create withdrawal request
-      await db.insert('instructorWithdrawals', {
-        instructorId: user!.id,
+      await db.insert('withdrawalRequests', {
+        userId: user!.id,
         amount,
         currency: earnings?.currency || 'USD',
         bankDetails,
-        status: 'pending',
-        requestedAt: new Date().toISOString()
+        status: 'pending'
       });
 
       // Update wallet balance
@@ -164,6 +166,7 @@ const InstructorEarnings = () => {
       if (wallet.length > 0) {
         await db.update('wallets', wallet[0].id, {
           balance: (wallet[0].balance || 0) - amount,
+          pendingBalance: (wallet[0].pendingBalance || 0) + amount,
           totalWithdrawals: (wallet[0].totalWithdrawals || 0) + amount
         });
       }
@@ -303,11 +306,15 @@ const InstructorEarnings = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="bankDetails">Bank Details</Label>
-                <Input
+                <Textarea
                   id="bankDetails"
-                  placeholder="Bank name, account number, account name"
+                  placeholder="Bank Name:
+Account Number:
+Account Name:
+Sort Code/Routing Number:"
                   value={bankDetails}
                   onChange={(e) => setBankDetails(e.target.value)}
+                  rows={6}
                 />
               </div>
               <Button 
@@ -378,24 +385,29 @@ const InstructorEarnings = () => {
               ) : (
                 <div className="space-y-4">
                   {withdrawalHistory.map((withdrawal) => (
-                    <div key={withdrawal.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">Withdrawal Request</span>
-                          <Badge className={getStatusBadgeColor(withdrawal.status)}>
-                            {withdrawal.status}
-                          </Badge>
+                    <div key={withdrawal.id} className="p-4 border rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="font-bold">
+                          {formatCurrency(withdrawal.amount, withdrawal.currency)}
                         </div>
-                        <div className="text-sm text-gray-500 mt-1">
-                          {new Date(withdrawal.createdAt).toLocaleDateString()}
-                          {withdrawal.bankDetails && ` • ${withdrawal.bankDetails}`}
-                        </div>
+                        <Badge className={getStatusBadgeColor(withdrawal.status)}>
+                          {withdrawal.status}
+                        </Badge>
                       </div>
-                      <div className="text-right">
-                        <div className="font-bold text-red-600">
-                          -{formatCurrency(withdrawal.amount, withdrawal.currency)}
-                        </div>
+                      <div className="text-sm text-gray-500">
+                        Requested: {new Date(withdrawal.createdAt).toLocaleDateString()}
+                        {withdrawal.processedAt && (
+                          <>
+                            <br />
+                            Processed: {new Date(withdrawal.processedAt).toLocaleDateString()}
+                          </>
+                        )}
                       </div>
+                      {withdrawal.rejectionReason && (
+                        <div className="text-sm text-red-600 mt-2">
+                          Reason: {withdrawal.rejectionReason}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
