@@ -87,7 +87,7 @@ const RegisterPage = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'learner' as 'learner' | 'instructor'
+    role: 'learner'
   });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -108,12 +108,7 @@ const RegisterPage = () => {
     setLoading(true);
 
     try {
-      await authService.register({
-        email: formData.email,
-        password: formData.password,
-        name: formData.name,
-        role: formData.role
-      });
+      await authService.register(formData.email, formData.password, formData.name, formData.role);
       toast({
         title: 'Success',
         description: 'Account created successfully',
@@ -163,7 +158,7 @@ const RegisterPage = () => {
               <select
                 id="role"
                 value={formData.role}
-                onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value as 'learner' | 'instructor' }))}
+                onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
                 className="w-full p-2 border border-gray-300 rounded-md"
               >
                 <option value="learner">Learn (Student)</option>
