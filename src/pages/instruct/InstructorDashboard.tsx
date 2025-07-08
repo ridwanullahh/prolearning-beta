@@ -9,6 +9,8 @@ import { db } from '@/lib/github-sdk';
 import MobileNav from '@/components/layout/MobileNav';
 import InstructorCourses from './InstructorCourses';
 import CourseBuilder from './CourseBuilder';
+import EarningsWithdrawals from '@/components/instructor/EarningsWithdrawals';
+import TicketSystem from '@/components/support/TicketSystem';
 
 const InstructorDashboard = () => {
   const [stats, setStats] = useState({
@@ -79,6 +81,8 @@ const InstructorDashboard = () => {
       <Route path="/courses" element={<InstructorCourses />} />
       <Route path="/courses/new" element={<CourseBuilder />} />
       <Route path="/courses/:id/edit" element={<CourseBuilder />} />
+      <Route path="/earnings" element={<EarningsWithdrawals />} />
+      <Route path="/support" element={<TicketSystem />} />
       <Route path="/" element={
         <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
           <div className="container mx-auto px-4 py-6">
@@ -262,11 +266,21 @@ const InstructorDashboard = () => {
                     >
                       Manage Courses
                     </Button>
-                    <Button variant="outline" className="w-full" size="sm">
-                      View Analytics
+                    <Button 
+                      variant="outline" 
+                      className="w-full" 
+                      size="sm"
+                      onClick={() => navigate('/instruct/earnings')}
+                    >
+                      Earnings & Withdrawals
                     </Button>
-                    <Button variant="outline" className="w-full" size="sm">
-                      Withdraw Earnings
+                    <Button 
+                      variant="outline" 
+                      className="w-full" 
+                      size="sm"
+                      onClick={() => navigate('/instruct/support')}
+                    >
+                      Get Support
                     </Button>
                   </CardContent>
                 </Card>

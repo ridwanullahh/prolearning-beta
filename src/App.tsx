@@ -20,6 +20,11 @@ import LessonEditor from "./pages/instruct/LessonEditor";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import LoadingScreen from "./components/ui/LoadingScreen";
 import NotFound from "./pages/NotFound";
+import BlogArchive from "./pages/blog/BlogArchive";
+import BlogPost from "./pages/blog/BlogPost";
+import HelpCenter from "./pages/help/HelpCenter";
+import HelpArticle from "./pages/help/HelpArticle";
+import SupportTicket from "./pages/support/SupportTicket";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +67,11 @@ const App = () => {
             <Route path="/auth/*" element={<AuthLayout />} />
             <Route path="/marketplace" element={<MarketplacePage />} />
             <Route path="/course/:id" element={<CourseDetailsPage />} />
+            <Route path="/blog" element={<BlogArchive />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
+            <Route path="/help" element={<HelpCenter />} />
+            <Route path="/help/:slug" element={<HelpArticle />} />
+            <Route path="/support" element={<SupportTicket />} />
             
             {/* Protected Learner Routes */}
             <Route 

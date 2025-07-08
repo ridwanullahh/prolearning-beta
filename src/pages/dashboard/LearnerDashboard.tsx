@@ -9,6 +9,8 @@ import { db } from '@/lib/github-sdk';
 import CourseGenerationWizard from '@/components/course/CourseGenerationWizard';
 import MobileNav from '@/components/layout/MobileNav';
 import MyCourses from './MyCourses';
+import WalletDashboard from '@/components/wallet/WalletDashboard';
+import TicketSystem from '@/components/support/TicketSystem';
 
 const LearnerDashboard = () => {
   const [showCourseGenerator, setShowCourseGenerator] = useState(false);
@@ -113,6 +115,8 @@ const LearnerDashboard = () => {
   return (
     <Routes>
       <Route path="/courses" element={<MyCourses />} />
+      <Route path="/wallet" element={<WalletDashboard />} />
+      <Route path="/support" element={<TicketSystem />} />
       <Route path="/" element={
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
           <div className="container mx-auto px-4 py-6">
@@ -294,6 +298,22 @@ const LearnerDashboard = () => {
                       onClick={() => navigate('/dashboard/courses')}
                     >
                       View My Courses
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      size="sm"
+                      onClick={() => navigate('/dashboard/wallet')}
+                    >
+                      Manage Wallet
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      size="sm"
+                      onClick={() => navigate('/dashboard/support')}
+                    >
+                      Get Support
                     </Button>
                   </CardContent>
                 </Card>

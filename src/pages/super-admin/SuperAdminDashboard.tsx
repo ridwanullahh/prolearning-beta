@@ -234,7 +234,7 @@ const SuperAdminDashboard = () => {
                 <div className="text-center py-8 text-gray-500">
                   <Wallet className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <h3 className="text-lg font-medium mb-2">Wallet Management</h3>
-                  <p>Advanced wallet analytics and management tools coming soon</p>
+                  <p>Wallet analytics and management tools are integrated into the withdrawal system</p>
                 </div>
               </CardContent>
             </Card>

@@ -1,18 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Eye, ArrowLeft, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { BookOpen, Eye, ArrowLeft, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { db } from '@/lib/github-sdk';
-import ReactMarkdown from 'react-markdown';
+import { toast } from 'sonner';
 
 const HelpArticle = () => {
   const { slug } = useParams();
   const [article, setArticle] = useState<any>(null);
-  const [relatedArticles, setRelatedArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hasVoted, setHasVoted] = useState(false);
+  const [relatedArticles, setRelatedArticles] = useState<any[]>([]);
+  const [feedback, setFeedback] = useState<'helpful' | 'not-helpful' | null>(null);
 
   useEffect(() => {
     if (slug) {
@@ -22,49 +22,25 @@ const HelpArticle = () => {
 
   const loadHelpArticle = async () => {
     try {
-      // First try to find by slug
-      let articles = await db.queryBuilder('helpArticles')
-        .where((article: any) => article.slug === slug && article.status === 'published')
+      const articles = await db.queryBuilder('helpArticles')
+        .where((article: any) => article.status === 'published' && (article.slug === slug || generateSlug(article.title) === slug))
         .exec();
 
-      // If not found by slug, try to generate slug from title
-      if (articles.length === 0) {
-        const allArticles = await db.queryBuilder('helpArticles')
-          .where((article: any) => article.status === 'published')
-          .exec();
-        
-        const matchedArticle = allArticles.find((article: any) => 
-          generateSlug(article.title) === slug
-        );
-        
-        if (matchedArticle) {
-          articles = [matchedArticle];
-        }
-      }
+      if (articles.length > 0) {
+        const currentArticle = articles[0];
+        setArticle(currentArticle);
 
-      if (articles.length === 0) {
-        setLoading(false);
-        return;
-      }
+        // Update view count
+        await db.update('helpArticles', currentArticle.id, {
+          viewCount: (currentArticle.viewCount || 0) + 1
+        });
 
-      const foundArticle = articles[0];
-      setArticle(foundArticle);
-
-      // Increment view count
-      await db.update('helpArticles', foundArticle.id, {
-        viewCount: (foundArticle.viewCount || 0) + 1
-      });
-
-      // Load related articles by category
-      if (foundArticle.category) {
+        // Load related articles
         const related = await db.queryBuilder('helpArticles')
-          .where((article: any) => 
-            article.category === foundArticle.category && 
-            article.id !== foundArticle.id && 
-            article.status === 'published'
-          )
+          .where((a: any) => a.status === 'published' && a.category === currentArticle.category && a.id !== currentArticle.id)
           .limit(3)
           .exec();
+        
         setRelatedArticles(related);
       }
     } catch (error) {
@@ -78,25 +54,24 @@ const HelpArticle = () => {
     return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
   };
 
-  const handleVote = async (helpful: boolean) => {
-    if (!article || hasVoted) return;
-
+  const handleFeedback = async (isHelpful: boolean) => {
     try {
-      const updateField = helpful ? 'helpful' : 'notHelpful';
-      const currentCount = article[updateField] || 0;
+      const feedbackType = isHelpful ? 'helpful' : 'not-helpful';
+      setFeedback(feedbackType);
+      
+      // Update article feedback
+      const currentHelpful = article.helpfulCount || 0;
+      const currentNotHelpful = article.notHelpfulCount || 0;
       
       await db.update('helpArticles', article.id, {
-        [updateField]: currentCount + 1
+        helpfulCount: isHelpful ? currentHelpful + 1 : currentHelpful,
+        notHelpfulCount: !isHelpful ? currentNotHelpful + 1 : currentNotHelpful
       });
 
-      setArticle(prev => ({
-        ...prev,
-        [updateField]: currentCount + 1
-      }));
-      
-      setHasVoted(true);
+      toast.success('Thank you for your feedback!');
     } catch (error) {
-      console.error('Error voting on article:', error);
+      console.error('Error submitting feedback:', error);
+      toast.error('Failed to submit feedback');
     }
   };
 
@@ -116,11 +91,8 @@ const HelpArticle = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
         <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Article Not Found</h1>
-            <p className="text-xl text-gray-600 mb-8">
-              The help article you're looking for doesn't exist or has been removed.
-            </p>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Article Not Found</h1>
             <Link to="/help">
               <Button>
                 <ArrowLeft className="mr-2 h-4 w-4" />
@@ -138,100 +110,115 @@ const HelpArticle = () => {
       <div className="container mx-auto px-4">
         <div className="max-w-4xl mx-auto">
           {/* Back Button */}
-          <div className="mb-6">
-            <Link to="/help">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Help Center
-              </Button>
-            </Link>
-          </div>
+          <Link to="/help" className="inline-block mb-6">
+            <Button variant="outline">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Help Center
+            </Button>
+          </Link>
 
           {/* Article */}
-          <Card className="mb-8">
-            <CardContent className="p-8">
-              {/* Article Header */}
-              <div className="mb-6">
+          <article className="mb-8">
+            <Card>
+              <CardHeader>
                 <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
                   <div className="flex items-center gap-1">
-                    <Eye className="h-4 w-4" />
-                    {article.viewCount || 0} views
+                    <BookOpen className="h-4 w-4" />
+                    {article.category}
                   </div>
+                  {article.viewCount && (
+                    <div className="flex items-center gap-1">
+                      <Eye className="h-4 w-4" />
+                      {article.viewCount} views
+                    </div>
+                  )}
                 </div>
-
-                <h1 className="text-4xl font-bold text-gray-900 mb-4">{article.title}</h1>
-                
-                <div className="flex gap-2 mb-6">
-                  <Badge variant="secondary">{article.category}</Badge>
+                <CardTitle className="text-3xl mb-4">{article.title}</CardTitle>
+                <div className="flex gap-2">
                   {article.tags && JSON.parse(article.tags).map((tag: string) => (
                     <Badge key={tag} variant="outline">{tag}</Badge>
                   ))}
                 </div>
-              </div>
-
-              {/* Article Content */}
-              <div className="prose max-w-none mb-8">
-                <ReactMarkdown>{article.content}</ReactMarkdown>
-              </div>
-
-              {/* Feedback Section */}
-              <div className="border-t pt-6">
-                <h3 className="text-lg font-semibold mb-4">Was this article helpful?</h3>
-                <div className="flex gap-4 items-center">
-                  <Button
-                    variant={hasVoted ? "secondary" : "outline"}
-                    size="sm"
-                    onClick={() => handleVote(true)}
-                    disabled={hasVoted}
-                  >
-                    <ThumbsUp className="h-4 w-4 mr-2" />
-                    Yes ({article.helpful || 0})
-                  </Button>
-                  <Button
-                    variant={hasVoted ? "secondary" : "outline"}
-                    size="sm"
-                    onClick={() => handleVote(false)}
-                    disabled={hasVoted}
-                  >
-                    <ThumbsDown className="h-4 w-4 mr-2" />
-                    No ({article.notHelpful || 0})
-                  </Button>
-                  {hasVoted && (
-                    <span className="text-sm text-gray-600">Thank you for your feedback!</span>
-                  )}
+              </CardHeader>
+              <CardContent>
+                <div className="prose prose-lg max-w-none">
+                  <div dangerouslySetInnerHTML={{ __html: article.content }} />
                 </div>
+              </CardContent>
+            </Card>
+          </article>
+
+          {/* Feedback Section */}
+          <Card className="mb-8">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold mb-4">Was this article helpful?</h3>
+                {feedback ? (
+                  <div className="text-green-600">
+                    Thank you for your feedback!
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center gap-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => handleFeedback(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <ThumbsUp className="h-4 w-4" />
+                      Yes, it was helpful
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleFeedback(false)}
+                      className="flex items-center gap-2"
+                    >
+                      <ThumbsDown className="h-4 w-4" />
+                      No, it wasn't helpful
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
 
           {/* Related Articles */}
           {relatedArticles.length > 0 && (
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Related Articles</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {relatedArticles.map((relatedArticle) => (
-                  <Card key={relatedArticle.id} className="hover:shadow-lg transition-shadow">
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold mb-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Related Articles</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {relatedArticles.map((relatedArticle) => (
+                    <div key={relatedArticle.id} className="p-4 border rounded-lg">
+                      <h4 className="font-semibold mb-2">
                         <Link
                           to={`/help/${relatedArticle.slug || generateSlug(relatedArticle.title)}`}
                           className="hover:text-blue-600 transition-colors"
                         >
                           {relatedArticle.title}
                         </Link>
-                      </h3>
-                      <p className="text-gray-600 text-sm line-clamp-2">
-                        {relatedArticle.content.substring(0, 100) + '...'}
+                      </h4>
+                      <p className="text-sm text-gray-600 line-clamp-2">
+                        {relatedArticle.content?.substring(0, 100) + '...'}
                       </p>
-                      <div className="mt-2">
-                        <Badge variant="outline">{relatedArticle.category}</Badge>
+                      <div className="text-xs text-gray-500 mt-2">
+                        {relatedArticle.category}
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           )}
+
+          {/* Still Need Help */}
+          <div className="text-center mt-8">
+            <p className="text-gray-600 mb-4">Still need help?</p>
+            <Link to="/support">
+              <Button>Contact Support</Button>
+            </Link>
+          </div>
         </div>
       </div>
     </div>
