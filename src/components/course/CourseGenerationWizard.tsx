@@ -59,9 +59,9 @@ const CourseGenerationWizard = ({ onCourseGenerated }: CourseGenerationWizardPro
   ];
 
   const subjects = [
-    'Mathematics', 'English Language', 'Science', 'Physics', 'Chemistry', 
+    'Islamic Studies', 'Mathematics', 'English Language', 'Science', 'Physics', 'Chemistry', 
     'Biology', 'Computer Science', 'History', 'Geography', 'Literature',
-    'Economics', 'Business Studies', 'Art', 'Music'
+    'Economics', 'Business Studies', 'Arabic Language', 'Yoruba'
   ];
 
   const learningStyles = [
