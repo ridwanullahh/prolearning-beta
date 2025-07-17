@@ -380,6 +380,47 @@ class PaymentService {
       return null;
     }
   }
+
+    async processWalletPayment(userId: string, amount: number): Promise<void> {
+        try {
+            let wallets = await db.queryBuilder('wallets')
+                .where(item => item.userId === userId)
+                .exec();
+
+            if (wallets.length === 0) {
+                throw new Error('Wallet not found.');
+            }
+
+            const wallet = wallets[0];
+
+            if (wallet.balance < amount) {
+                throw new Error('Insufficient wallet balance.');
+            }
+
+            // Deduct amount from wallet balance
+            await db.update('wallets', wallet.id, {
+                balance: (wallet.balance || 0) - amount,
+                updatedAt: new Date().toISOString()
+            });
+
+            // Create transaction record
+            await db.insert('transactions', {
+                userId: userId,
+                amount: amount,
+                currency: wallet.currency,
+                type: 'debit',
+                category: 'course_purchase',
+                description: 'Course purchase from wallet',
+                referenceId: this.generateReference(),
+                status: 'completed',
+                paymentMethod: 'wallet'
+            });
+
+        } catch (error) {
+            console.error('Error processing wallet payment:', error);
+            throw error;
+        }
+    }
 }
 
 export const paymentService = new PaymentService();

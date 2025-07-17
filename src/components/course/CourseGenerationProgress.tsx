@@ -28,6 +28,19 @@ interface CourseGenerationProgressProps {
 }
 
 const CourseGenerationProgress: React.FC<CourseGenerationProgressProps> = ({ progress }) => {
+  if (!progress) {
+    return null;
+  }
+  
+  // Check if the progress is for the current user
+  // Implement your logic here to verify if the progress belongs to the current user.
+  // For example, you might have a userId in the progress object and compare it with the current user's ID.
+  const isCurrentUser = true; // Replace with your actual logic
+
+  if (!isCurrentUser) {
+    return null; // or render a different component or message
+  }
+
   const getStepIcon = (step: string) => {
     switch (step) {
       case 'curriculum':
@@ -173,8 +186,17 @@ const CourseGenerationProgress: React.FC<CourseGenerationProgressProps> = ({ pro
 
         {progress.lesson && progress.step === 'lesson' && (
           <div className="p-4 bg-blue-50 rounded-lg">
-            <h4 className="font-medium text-blue-900 mb-2">Lesson Generated</h4>
-            <p className="text-sm text-blue-800">{progress.lesson.title}</p>
+            <h4 className="font-medium text-blue-900 mb-2">Lesson Generated: {progress.lesson.title}</h4>
+            
+            {progress.lesson.contents && progress.lesson.contents.length > 0 && (
+              <div className="mb-2">
+                <h5 className="font-medium text-blue-700">Content Preview:</h5>
+                <p className="text-sm text-blue-600 line-clamp-2">
+                  {progress.lesson.contents[0].content}
+                </p>
+              </div>
+            )}
+
             <div className="flex gap-2 mt-2">
               {progress.lesson.contents?.length > 0 && (
                 <Badge variant="outline">

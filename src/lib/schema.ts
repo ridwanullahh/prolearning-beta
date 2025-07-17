@@ -1,0 +1,118 @@
+export const schema = {
+  users: {
+    email: 'string',
+    password: 'string',
+    name: 'string',
+    role: 'string', // e.g., 'learner', 'instructor', 'admin'
+    profile: 'object',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  courses: {
+    title: 'string',
+    description: 'string',
+    instructorId: 'string',
+    price: 'number',
+    tags: 'array',
+    isPublished: 'boolean',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  lessons: {
+    courseId: 'string',
+    title: 'string',
+    description: 'string',
+    order: 'number',
+    duration: 'number',
+    contents: 'array', // Array of content blocks (e.g., { type: 'rich_text', content: '...' })
+    quiz: 'object', // Quiz object
+    flashcards: 'array', // Array of flashcard objects
+    keyPoints: 'array', // Array of key point objects
+    mindMap: 'object', // Mind map object
+    isAiGenerated: 'boolean',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  enrollments: {
+    userId: 'string',
+    courseId: 'string',
+    progress: 'number',
+    completed: 'boolean',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  lessonContents: {
+    lessonId: 'string',
+    type: 'string',
+    content: 'string',
+    order: 'number',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  quizzes: {
+    lessonId: 'string',
+    courseId: 'string',
+    title: 'string',
+    questions: 'array',
+    passingScore: 'number',
+    attempts: 'number',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  flashcards: {
+    lessonId: 'string',
+    courseId: 'string',
+    front: 'string',
+    back: 'string',
+    difficulty: 'string',
+    hint: 'string',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  keyPoints: {
+    lessonId: 'string',
+    courseId: 'string',
+    point: 'string',
+    explanation: 'string',
+    importance: 'string',
+    examples: 'string',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  mindMaps: {
+    lessonId: 'string',
+    courseId: 'string',
+    title: 'string',
+    data: 'object',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  userProgress: {
+    userId: 'string',
+    courseId: 'string',
+    lessonId: 'string',
+    completed: 'boolean',
+    score: 'number',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  aiGenerationUsage: {
+    userId: 'string',
+    month: 'string',
+    freeGenerationsUsed: 'number',
+    paidGenerationsUsed: 'number',
+    subscriptionActive: 'boolean',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  // Static tables
+  academicLevels: {
+    name: 'string',
+    description: 'string',
+    order: 'number',
+  },
+  subjects: {
+    name: 'string',
+    description: 'string',
+  },
+};

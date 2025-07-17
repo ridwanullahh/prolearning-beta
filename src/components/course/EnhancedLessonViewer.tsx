@@ -90,6 +90,7 @@ const EnhancedLessonViewer = ({
       ]);
 
       if (lessonData) {
+        console.log('lessonData', lessonData);
         setLesson(lessonData);
         setContents(contentsData);
         setQuizzes(quizzesData);
@@ -103,10 +104,16 @@ const EnhancedLessonViewer = ({
 
         // Check if lesson can be accessed based on release settings
         const now = new Date();
-        const canAccessLesson = lessonData.releaseType === 'immediate' || 
-          (lessonData.releaseType === 'scheduled' && new Date(lessonData.scheduledDate) <= now) ||
-          (lessonData.releaseType === 'drip' && await checkDripAccess(lessonData));
-        
+        let canAccessLesson = false;
+
+        if (lessonData.isAiGenerated) {
+          canAccessLesson = true;
+        } else {
+          canAccessLesson = lessonData.releaseType === 'immediate' ||
+            (lessonData.releaseType === 'scheduled' && new Date(lessonData.scheduledDate) <= now) ||
+            (lessonData.releaseType === 'drip' && await checkDripAccess(lessonData));
+        }
+
         setCanAccess(canAccessLesson);
       }
     } catch (error) {
@@ -146,7 +153,7 @@ const EnhancedLessonViewer = ({
   const submitQuiz = async () => {
     if (!currentQuiz) return;
 
-    const questions = JSON.parse(currentQuiz.questions || '[]');
+    const questions = currentQuiz.questions || [];
     let correct = 0;
     
     questions.forEach((question: any) => {
@@ -295,7 +302,7 @@ const EnhancedLessonViewer = ({
   const renderQuizContent = () => {
     if (!currentQuiz) return <p>No quiz available for this lesson.</p>;
 
-    const questions = JSON.parse(currentQuiz.questions || '[]');
+    const questions = currentQuiz.questions || [];
     const maxAttempts = currentQuiz.attempts || 3;
     const canRetake = quizAttempts < maxAttempts && quizScore !== null && quizScore < (currentQuiz.passingScore || 70);
 
@@ -494,7 +501,7 @@ const EnhancedLessonViewer = ({
     if (mindMaps.length === 0) return <p>No mind map available for this lesson.</p>;
 
     const mindMap = mindMaps[0];
-    const mapData = JSON.parse(mindMap.data || '{}');
+    const mapData = mindMap.data || { nodes: [] };
 
     return (
       <div className="space-y-4">

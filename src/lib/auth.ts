@@ -54,6 +54,9 @@ class AuthService {
 
       this.currentToken = token;
 
+      localStorage.setItem('prolearning-token', token);
+      localStorage.setItem('prolearning-user', JSON.stringify(this.currentUser));
+
       console.log('[AUTH DEBUG] Login successful for user:', this.currentUser.id);
       return this.currentUser;
     } catch (error: any) {
@@ -142,11 +145,22 @@ class AuthService {
     }
     this.currentUser = null;
     this.currentToken = null;
+    localStorage.removeItem('prolearning-token');
+    localStorage.removeItem('prolearning-user');
     console.log('[AUTH DEBUG] Logout complete');
   }
 
   getCurrentUser(): AuthUser | null {
     if (this.currentUser) {
+      return this.currentUser;
+    }
+
+    const token = localStorage.getItem('prolearning-token');
+    const user = localStorage.getItem('prolearning-user');
+
+    if (token && user) {
+      this.currentToken = token;
+      this.currentUser = JSON.parse(user);
       return this.currentUser;
     }
 

@@ -1,7 +1,4 @@
-
 import BlogCMS from '@/components/admin/BlogCMS';
-import { AppHeader, AppSidebar } from '@/components/layout/Sidebar';
-import { SidebarProvider } from '@/components/ui/sidebar';
 import TicketSystem from '@/components/support/TicketSystem';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -25,9 +22,8 @@ import {
 	Wallet,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Outlet } from 'react-router-dom';
 
-const SuperAdminDashboard = () => {
+const SuperAdminDashboardHome = () => {
 	const [stats, setStats] = useState({
 		totalUsers: 0,
 		totalCourses: 0,
@@ -91,30 +87,145 @@ const SuperAdminDashboard = () => {
 	};
 
 	return (
-		<SidebarProvider>
-			<div className="flex min-h-screen w-full flex-row bg-muted/40">
-				<AppSidebar />
-				<div className="flex flex-col sm:gap-4">
-					<AppHeader />
-					<main className="grid flex-1 items-start gap-4 p-4 sm:px-6 md:gap-8">
-						<Tabs defaultValue="overview">
-							<TabsList>
-								<TabsTrigger value="overview">Overview</TabsTrigger>
-								<TabsTrigger value="wallet">Wallet</TabsTrigger>
-								<TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
-								<TabsTrigger value="blog">Blog</TabsTrigger>
-								<TabsTrigger value="support">Support</TabsTrigger>
-							</TabsList>
-							<TabsContent value="overview">
-								<Outlet />
-							</TabsContent>
-						</Tabs>
-					</main>
-				</div>
+		<>
+			<div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
+				<Card>
+					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+						<CardTitle className="text-sm font-medium">
+							Total Users
+						</CardTitle>
+						<Users className="h-4 w-4 text-muted-foreground" />
+					</CardHeader>
+					<CardContent>
+						<div className="text-2xl font-bold">
+							{stats.totalUsers}
+						</div>
+						<p className="text-xs text-muted-foreground">
+							Registered users
+						</p>
+					</CardContent>
+				</Card>
+				<Card>
+					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+						<CardTitle className="text-sm font-medium">
+							Total Courses
+						</CardTitle>
+						<BookOpen className="h-4 w-4 text-muted-foreground" />
+					</CardHeader>
+					<CardContent>
+						<div className="text-2xl font-bold">
+							{stats.totalCourses}
+						</div>
+						<p className="text-xs text-muted-foreground">
+							Published courses
+						</p>
+					</CardContent>
+				</Card>
+				<Card>
+					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+						<CardTitle className="text-sm font-medium">
+							Platform Revenue
+						</CardTitle>
+						<DollarSign className="h-4 w-4 text-muted-foreground" />
+					</CardHeader>
+					<CardContent>
+						<div className="text-2xl font-bold">
+							{formatCurrency(stats.totalRevenue)}
+						</div>
+						<p className="text-xs text-muted-foreground">
+							Total transactions
+						</p>
+					</CardContent>
+				</Card>
+				<Card>
+					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+						<CardTitle className="text-sm font-medium">
+							Active Tickets
+						</CardTitle>
+						<MessageSquare className="h-4 w-4 text-muted-foreground" />
+					</CardHeader>
+					<CardContent>
+						<div className="text-2xl font-bold">
+							{stats.activeTickets}
+						</div>
+						<p className="text-xs text-muted-foreground">
+							Pending support
+						</p>
+					</CardContent>
+				</Card>
 			</div>
-		</SidebarProvider>
+			<Tabs defaultValue="wallet">
+				<TabsList>
+					<TabsTrigger value="wallet">Wallet</TabsTrigger>
+					<TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
+					<TabsTrigger value="blog">Blog</TabsTrigger>
+					<TabsTrigger value="support">Support</TabsTrigger>
+				</TabsList>
+				<TabsContent value="wallet">
+					<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+						<Card>
+							<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+								<CardTitle className="text-sm font-medium">
+									Platform Revenue
+								</CardTitle>
+								<Wallet className="h-4 w-4 text-muted-foreground" />
+							</CardHeader>
+							<CardContent>
+								<div className="text-2xl font-bold text-green-600">
+									{formatCurrency(stats.totalRevenue)}
+								</div>
+								<p className="text-xs text-muted-foreground">
+									Total earnings
+								</p>
+							</CardContent>
+						</Card>
+						<Card>
+							<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+								<CardTitle className="text-sm font-medium">
+									Total Payouts
+								</CardTitle>
+								<CreditCard className="h-4 w-4 text-muted-foreground" />
+							</CardHeader>
+							<CardContent>
+								<div className="text-2xl font-bold">
+									{formatCurrency(stats.totalWithdrawals)}
+								</div>
+								<p className="text-xs text-muted-foreground">
+									Paid to instructors
+								</p>
+							</CardContent>
+						</Card>
+						<Card>
+							<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+								<CardTitle className="text-sm font-medium">
+									Pending Payouts
+								</CardTitle>
+								<Settings className="h-4 w-4 text-muted-foreground" />
+							</CardHeader>
+							<CardContent>
+								<div className="text-2xl font-bold text-yellow-600">
+									{formatCurrency(stats.pendingWithdrawals)}
+								</div>
+								<p className="text-xs text-muted-foreground">
+									Awaiting approval
+								</p>
+							</CardContent>
+						</Card>
+					</div>
+				</TabsContent>
+				<TabsContent value="withdrawals">
+					<WithdrawalManagement />
+				</TabsContent>
+				<TabsContent value="blog">
+					<BlogCMS />
+				</TabsContent>
+				<TabsContent value="support">
+					<TicketSystem isAdmin={true} />
+				</TabsContent>
+			</Tabs>
+		</>
 	);
-}
+};
 
 // Withdrawal Management Component
 const WithdrawalManagement = () => {
@@ -315,4 +426,4 @@ const WithdrawalManagement = () => {
 	);
 };
 
-export default SuperAdminDashboard;
+export default SuperAdminDashboardHome;

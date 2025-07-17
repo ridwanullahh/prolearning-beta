@@ -1,6 +1,7 @@
 import { config } from './config';
 import UniversalSDK from './universal-sdk';
 import CryptoJS from 'crypto-js';
+import { schema } from './schema';
 
 class GitHubDatabase {
   private sdk: UniversalSDK;
@@ -59,6 +60,7 @@ class GitHubDatabase {
 
   async insert(table: string, data: any) {
     await this.initialize();
+    this.validate(table, data);
     const item = {
       ...data,
       createdAt: new Date().toISOString(),
@@ -70,8 +72,25 @@ class GitHubDatabase {
     return result;
   }
 
+  async bulkInsert(table: string, data: any[]) {
+    await this.initialize();
+    const items = data.map(d => {
+      this.validate(table, d);
+      return {
+        ...d,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    });
+    
+    const result = await this.sdk.bulkInsert(table, items);
+    console.log(`Bulk inserted into ${table}:`, result);
+    return result;
+  }
+
   async update(table: string, id: string, data: any) {
     await this.initialize();
+    this.validate(table, data);
     try {
       const updatedData = {
         ...data,
@@ -191,6 +210,44 @@ class GitHubDatabase {
 
   private generateId(): string {
     return Math.random().toString(36).substr(2, 9);
+  }
+  validate(table: string, data: any) {
+    const tableSchema = (schema as any)[table];
+    if (!tableSchema) {
+      // No schema defined for this table, so we can't validate.
+      // In a stricter environment, you might want to throw an error here.
+      console.warn(`No schema found for table: ${table}. Skipping validation.`);
+      return;
+    }
+
+    for (const key in tableSchema) {
+      if (tableSchema.hasOwnProperty(key)) {
+        const expectedType = tableSchema[key];
+        const actualType = typeof data[key];
+
+        // Allow for missing optional fields (e.g. not passing 'updatedAt' on insert)
+        if (!data.hasOwnProperty(key)) {
+          continue;
+        }
+        
+        // Special case for 'array' and 'object', since typeof returns 'object' for both
+        if (expectedType === 'array' && !Array.isArray(data[key])) {
+          throw new Error(`Invalid type for ${key} in ${table}. Expected array, got ${actualType}`);
+        } else if (expectedType === 'object' && actualType !== 'object') {
+          if (data[key] === null) continue; // Allow null for objects
+          throw new Error(`Invalid type for ${key} in ${table}. Expected object, got ${actualType}`);
+        } else if (expectedType === 'object' && Array.isArray(data[key])) {
+          //This is a special case for mindmap data which can be an array or object
+          if(table === 'mindMaps' && key === 'data'){
+            continue;
+          }
+          throw new Error(`Invalid type for ${key} in ${table}. Expected object, got array`);
+        }
+        else if (expectedType !== 'array' && expectedType !== 'object' && actualType !== expectedType) {
+          throw new Error(`Invalid type for ${key} in ${table}. Expected ${expectedType}, got ${actualType}`);
+        }
+      }
+    }
   }
 }
 

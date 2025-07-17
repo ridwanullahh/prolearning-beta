@@ -8,11 +8,13 @@ import { Star, Users, Clock, BookOpen, Award, Play, ShoppingCart, Heart } from '
 import { db } from '@/lib/github-sdk';
 import { authService } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
+import { useCart } from '@/components/cart/Cart';
 
 const CourseDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { addItem } = useCart();
   const [course, setCourse] = useState<any>(null);
   const [lessons, setLessons] = useState<any[]>([]);
   const [instructor, setInstructor] = useState<any>(null);
@@ -95,35 +97,16 @@ const CourseDetailsPage = () => {
     try {
       setEnrolling(true);
 
-      // Check if it's a free course or paid
-      if (course.price === 0) {
-        // Free enrollment
-        await db.insert('enrollments', {
-          userId: user.id,
-          courseId: course.id,
-          enrolledAt: new Date().toISOString(),
-          status: 'active',
-          paymentStatus: 'free'
-        });
+      // Add course to cart
+      const newItem = {
+        id: course.id,
+        name: course.title,
+        price: course.price,
+      };
+      addItem(newItem);
 
-        // Update course enrollment count
-        await db.update('courses', course.id, {
-          enrollmentCount: (course.enrollmentCount || 0) + 1
-        });
+      navigate('/checkout');
 
-        setIsEnrolled(true);
-        toast({
-          title: 'Success',
-          description: 'Successfully enrolled in the course!',
-        });
-
-        // Navigate to course viewer
-        navigate(`/my-course/${course.id}`);
-      } else {
-        // Paid course - redirect to checkout
-        await addToCart();
-        navigate('/checkout');
-      }
     } catch (error) {
       console.error('Error enrolling:', error);
       toast({
@@ -136,73 +119,15 @@ const CourseDetailsPage = () => {
     }
   };
 
-  const addToCart = async () => {
-    if (!user || !course) return;
+  const addToCart = () => {
+    if (!course) return;
 
-    try {
-      setAddingToCart(true);
-
-      // Get or create user's cart
-      let cart = await db.queryBuilder('carts')
-        .where((c: any) => c.userId === user.id)
-        .exec();
-
-      let cartItems = [];
-      if (cart.length > 0) {
-        cartItems = JSON.parse(cart[0].items || '[]');
-      }
-
-      // Check if course is already in cart
-      const existingItem = cartItems.find((item: any) => item.courseId === course.id);
-      if (existingItem) {
-        toast({
-          title: 'Info',
-          description: 'Course is already in your cart',
-        });
-        return;
-      }
-
-      // Add course to cart
-      const newItem = {
-        courseId: course.id,
-        title: course.title,
-        price: course.price,
-        currency: course.currency,
-        thumbnailUrl: course.thumbnailUrl
-      };
-      cartItems.push(newItem);
-
-      const totalAmount = cartItems.reduce((sum: number, item: any) => sum + (item.price || 0), 0);
-
-      if (cart.length > 0) {
-        await db.update('carts', cart[0].id, {
-          items: JSON.stringify(cartItems),
-          totalAmount,
-          updatedAt: new Date().toISOString()
-        });
-      } else {
-        await db.insert('carts', {
-          userId: user.id,
-          items: JSON.stringify(cartItems),
-          totalAmount,
-          currency: course.currency
-        });
-      }
-
-      toast({
-        title: 'Success',
-        description: 'Course added to cart!',
-      });
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to add course to cart',
-        variant: 'destructive'
-      });
-    } finally {
-      setAddingToCart(false);
-    }
+    const newItem = {
+      id: course.id,
+      name: course.title,
+      price: course.price,
+    };
+    addItem(newItem);
   };
 
   const formatPrice = (price: number, currency: string = 'USD') => {
@@ -460,3 +385,5 @@ const CourseDetailsPage = () => {
 };
 
 export default CourseDetailsPage;
+
+// This is a test comment

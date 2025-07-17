@@ -1,13 +1,13 @@
 // Environment configuration
 export const config = {
   github: {
-    owner: import.meta.env.VITE_GITHUB_OWNER || 'your-github-username',
-    repo: import.meta.env.VITE_GITHUB_REPO || 'prolearning-db',
-    token: import.meta.env.VITE_GITHUB_TOKEN || 'your-github-token',
+    owner: import.meta.env.VITE_GITHUB_OWNER,
+    repo: import.meta.env.VITE_GITHUB_REPO,
+    token: import.meta.env.VITE_GITHUB_TOKEN,
   },
   ai: {
     chutesToken: import.meta.env.VITE_CHUTES_API_TOKEN || '',
-    geminiKey: import.meta.env.VITE_GOOGLE_AI_API_KEY || '',
+    geminiKey: import.meta.env.VITE_GEMINI_AI_KEY || 'AIzaSyBc0N-5GmNRED_voJJOm6hJsJIfL5XMPUM',
     cloudflareAccountId: import.meta.env.VITE_CLOUDFLARE_ACCOUNT_ID || '',
     cloudflareToken: import.meta.env.VITE_CLOUDFLARE_API_TOKEN || '',
     openai: import.meta.env.VITE_OPENAI_API_KEY || '',

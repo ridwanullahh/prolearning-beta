@@ -25,17 +25,30 @@ const AuthLayout = () => {
     return <Navigate to={roleRoutes[user.role]} replace />;
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
-        <Routes>
-          <Route path="login" element={<LoginForm />} />
-          <Route path="register" element={<RegisterForm />} />
-          <Route path="*" element={<Navigate to="login" replace />} />
-        </Routes>
-      </div>
-    </div>
-  );
+ return (
+  <div className="min-h-screen w-full lg:grid lg:grid-cols-2">
+  	<div className="hidden lg:flex items-center justify-center flex-col bg-muted p-10 text-center">
+  		<div className="mx-auto w-[350px]">
+  			<h1 className="text-3xl font-bold text-primary">
+  				Welcome to ProLearning
+  			</h1>
+  			<p className="text-muted-foreground mt-2">
+  				Your personalized journey to mastery starts here. Access AI-driven
+  				courses and expert-led content.
+  			</p>
+  		</div>
+  	</div>
+  	<div className="flex items-center justify-center py-12">
+  		<div className="mx-auto grid w-[350px] gap-6">
+  			<Routes>
+  				<Route path="login" element={<LoginForm />} />
+  				<Route path="register" element={<RegisterForm />} />
+  				<Route path="*" element={<Navigate to="login" replace />} />
+  			</Routes>
+  		</div>
+  	</div>
+  </div>
+ );
 };
 
 export default AuthLayout;
