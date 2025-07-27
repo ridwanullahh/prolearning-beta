@@ -1,10 +1,13 @@
 export const schema = {
   users: {
     email: 'string',
-    password: 'string',
+    password: 'string', // Optional for OAuth providers
     name: 'string',
     role: 'string', // e.g., 'learner', 'instructor', 'admin'
     profile: 'object',
+    googleId: 'string',
+    resetPasswordToken: 'string',
+    resetPasswordExpires: 'string',
     createdAt: 'string',
     updatedAt: 'string',
   },
@@ -102,6 +105,76 @@ export const schema = {
     freeGenerationsUsed: 'number',
     paidGenerationsUsed: 'number',
     subscriptionActive: 'boolean',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  cart: {
+    userId: 'string',
+    items: 'array', // [{ courseId, price, quantity }]
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  orders: {
+    userId: 'string',
+    items: 'array', // [{ courseId, price, quantity }]
+    total: 'number',
+    status: 'string', // e.g., 'pending', 'completed', 'failed'
+    paymentGateway: 'string',
+    transactionId: 'string',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  transactions: {
+    userId: 'string',
+    orderId: 'string',
+    amount: 'number',
+    currency: 'string',
+    status: 'string',
+    gateway: 'string',
+    gatewayTransactionId: 'string',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  wallets: {
+    userId: 'string',
+    balance: 'number',
+    currency: 'string',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  walletTransactions: {
+    walletId: 'string',
+    type: 'string', // 'credit' or 'debit'
+    amount: 'number',
+    description: 'string',
+    relatedEntityId: 'string', // e.g., orderId, withdrawalId
+    relatedEntityType: 'string',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  withdrawals: {
+    userId: 'string',
+    amount: 'number',
+    status: 'string', // 'pending', 'approved', 'rejected'
+    method: 'string',
+    details: 'object',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  payouts: {
+    instructorId: 'string',
+    amount: 'number',
+    status: 'string', // 'pending', 'paid', 'failed'
+    payoutDate: 'string',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  notifications: {
+    userId: 'string',
+    message: 'string',
+    isRead: 'boolean',
+    type: 'string',
+    link: 'string',
     createdAt: 'string',
     updatedAt: 'string',
   },

@@ -595,8 +595,8 @@ const EnhancedLessonViewer = ({
       </Card>
 
       {/* Lesson Content */}
-      <Tabs defaultValue="content" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+      <Tabs defaultValue="content" className="w-full sticky top-0 bg-white z-10">
+        <TabsList className="grid w-full grid-cols-5 border-b">
           <TabsTrigger value="content" className="flex items-center gap-2">
             <BookOpen className="h-4 w-4" />
             Content

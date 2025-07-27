@@ -1,18 +1,17 @@
-
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, BookOpen, Eye, MessageCircle } from 'lucide-react';
+import { Search, BookOpen, MessageCircle, ArrowRight } from 'lucide-react';
 import { db } from '@/lib/github-sdk';
+import { motion } from 'framer-motion';
 
-const HelpCenter = () => {
+const HelpCenter: React.FC = () => {
   const [articles, setArticles] = useState<any[]>([]);
   const [filteredArticles, setFilteredArticles] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -22,7 +21,7 @@ const HelpCenter = () => {
 
   useEffect(() => {
     filterArticles();
-  }, [articles, searchTerm, selectedCategory]);
+  }, [articles, searchTerm]);
 
   const loadHelpArticles = async () => {
     try {
@@ -30,10 +29,7 @@ const HelpCenter = () => {
         .where((article: any) => article.status === 'published')
         .orderBy('createdAt', 'desc')
         .exec();
-
       setArticles(publishedArticles);
-      
-      // Extract unique categories
       const uniqueCategories = [...new Set(publishedArticles.map((article: any) => article.category).filter(Boolean))];
       setCategories(uniqueCategories);
     } catch (error) {
@@ -44,20 +40,10 @@ const HelpCenter = () => {
   };
 
   const filterArticles = () => {
-    let filtered = articles;
-
-    if (searchTerm) {
-      filtered = filtered.filter(article =>
-        article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        article.content?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        article.tags?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (selectedCategory) {
-      filtered = filtered.filter(article => article.category === selectedCategory);
-    }
-
+    let filtered = articles.filter(article =>
+        (article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+         (article.content || '').toLowerCase().includes(searchTerm.toLowerCase()))
+    );
     setFilteredArticles(filtered);
   };
 
@@ -66,129 +52,63 @@ const HelpCenter = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          </div>
-        </div>
-      </div>
-    );
+    return <div className="text-center py-20">Loading help center...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
-      <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Help Center</h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Find answers to your questions and get the help you need
-            </p>
-          </div>
-
-          {/* Search and Filter */}
-          <div className="mb-8">
-            <div className="flex flex-col md:flex-row gap-4 items-center">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search help articles..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                <Button
-                  variant={selectedCategory === '' ? 'default' : 'outline'}
-                  onClick={() => setSelectedCategory('')}
-                  size="sm"
-                >
-                  All
-                </Button>
-                {categories.map(category => (
-                  <Button
-                    key={category}
-                    variant={selectedCategory === category ? 'default' : 'outline'}
-                    onClick={() => setSelectedCategory(category)}
-                    size="sm"
-                  >
-                    {category}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="mb-8">
-            <div className="flex justify-center">
-              <Link to="/support">
-                <Button>
-                  <MessageCircle className="mr-2 h-4 w-4" />
-                  Contact Support
-                </Button>
-              </Link>
-            </div>
-          </div>
-
-          {/* Help Articles Grid */}
-          {filteredArticles.length === 0 ? (
-            <div className="text-center py-12">
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No articles found</h3>
-              <p className="text-gray-600">Try adjusting your search or filter criteria.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredArticles.map((article) => (
-                <Card key={article.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
-                      <BookOpen className="h-4 w-4" />
-                      <span>{article.category}</span>
-                      {article.viewCount && (
-                        <>
-                          <Eye className="h-4 w-4 ml-2" />
-                          {article.viewCount}
-                        </>
-                      )}
+    <div className="bg-gray-50 dark:bg-gray-950">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <motion.div initial={{opacity:0, y:-20}} animate={{opacity:1, y:0}} className="text-center mb-12">
+                <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900 dark:text-white">Help Center</h1>
+                <p className="mt-4 text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                    How can we help you today?
+                </p>
+                <div className="mt-8 max-w-2xl mx-auto">
+                    <div className="relative">
+                        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                        <Input
+                          placeholder="Search for articles..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-12 h-14 rounded-full text-lg"
+                        />
                     </div>
-                    <CardTitle className="text-xl mb-2">
-                      <Link
-                        to={`/help/${article.slug || generateSlug(article.title)}`}
-                        className="hover:text-blue-600 transition-colors"
-                      >
-                        {article.title}
-                      </Link>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-600 mb-4 line-clamp-3">
-                      {article.content?.substring(0, 150) + '...'}
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <div className="flex gap-2">
-                        {article.tags && JSON.parse(article.tags).slice(0, 2).map((tag: string) => (
-                          <Badge key={tag} variant="outline">{tag}</Badge>
+                </div>
+            </motion.div>
+
+            {categories.map(category => (
+                <div key={category} className="mb-12">
+                    <h2 className="text-2xl font-bold mb-6">{category}</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {filteredArticles.filter(a => a.category === category).map((article, index) => (
+                             <motion.div key={article.id} initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{delay: index * 0.1}}>
+                                <Link to={`/help/${article.slug || generateSlug(article.title)}`}>
+                                    <Card className="h-full flex flex-col overflow-hidden rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 group">
+                                        <CardHeader>
+                                            <div className="w-12 h-12 rounded-lg bg-green-100 dark:bg-green-900/50 flex items-center justify-center mb-4">
+                                                <BookOpen className="h-6 w-6 text-green-600 dark:text-green-400"/>
+                                            </div>
+                                            <CardTitle className="text-xl group-hover:text-green-600 transition-colors">{article.title}</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="flex-grow">
+                                            <p className="text-gray-500 dark:text-gray-400 text-sm line-clamp-3">{article.content?.substring(0, 150)}...</p>
+                                        </CardContent>
+                                    </Card>
+                                </Link>
+                            </motion.div>
                         ))}
-                      </div>
-                      <Link
-                        to={`/help/${article.slug || generateSlug(article.title)}`}
-                        className="text-blue-600 hover:text-blue-800 font-medium text-sm"
-                      >
-                        Read More →
-                      </Link>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                </div>
+            ))}
+
+            <div className="text-center mt-16">
+                <h3 className="text-2xl font-semibold">Can't find what you're looking for?</h3>
+                <p className="text-gray-500 mt-2">Our support team is here to help.</p>
+                <Link to="/support">
+                    <Button className="mt-6 rounded-full"><MessageCircle className="mr-2 h-4 w-4"/> Contact Support</Button>
+                </Link>
             </div>
-          )}
         </div>
-      </div>
     </div>
   );
 };

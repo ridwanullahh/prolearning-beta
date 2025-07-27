@@ -18,10 +18,20 @@ export const config = {
   payment: {
     paystackPublicKey: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || '',
     paystackSecretKey: import.meta.env.VITE_PAYSTACK_SECRET_KEY || '',
+    platformCommission: parseFloat(import.meta.env.VITE_PLATFORM_COMMISSION || '15'),
   },
   app: {
     url: import.meta.env.VITE_APP_URL || 'http://localhost:5173',
     apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5173/api',
+    adminUserId: import.meta.env.VITE_ADMIN_USER_ID || '',
+  },
+  email: {
+    user: import.meta.env.VITE_EMAIL_USER,
+    pass: import.meta.env.VITE_EMAIL_PASS,
+  },
+  google: {
+    clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+    clientSecret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET,
   },
 };
 
@@ -44,10 +54,4 @@ export const COUNTRY_CURRENCY_MAP: Record<string, string> = {
   'United Kingdom': 'GBP',
   'Canada': 'CAD',
   'Australia': 'AUD',
-  'Germany': 'EUR',
-  'France': 'EUR',
-  'India': 'INR',
-  'South Africa': 'ZAR',
-  'Kenya': 'KES',
-  'Ghana': 'GHS',
 };

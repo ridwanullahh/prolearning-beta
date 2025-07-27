@@ -1,6 +1,7 @@
 import { config } from './config';
 import UniversalSDK from './universal-sdk';
 import CryptoJS from 'crypto-js';
+import bcrypt from 'bcryptjs';
 import { schema } from './schema';
 
 class GitHubDatabase {
@@ -129,7 +130,7 @@ class GitHubDatabase {
   }
 
   queryBuilder(table: string) {
-    return new QueryBuilder(this, table);
+    return this.sdk.queryBuilder(table);
   }
 
   // Authentication methods
@@ -142,7 +143,7 @@ class GitHubDatabase {
       throw new Error('User already exists');
     }
 
-    const hashedPassword = this.hashPassword(password);
+    const hashedPassword = await this.hashPassword(password);
     const user = await this.sdk.insert('users', {
       email,
       password: hashedPassword,
@@ -160,7 +161,7 @@ class GitHubDatabase {
     const users = await this.sdk.get('users');
     const user = users.find((u: any) => u.email === email);
     
-    if (!user || !this.verifyPassword(password, user.password)) {
+    if (!user || !await this.verifyPassword(password, user.password)) {
       throw new Error('Invalid credentials');
     }
 
@@ -196,12 +197,14 @@ class GitHubDatabase {
     return this.sessions.delete(token);
   }
 
-  hashPassword(password: string): string {
-    return CryptoJS.SHA256(password).toString();
+  async hashPassword(password: string): Promise<string> {
+    const saltRounds = 10;
+    const salt = await bcrypt.genSalt(saltRounds);
+    return await bcrypt.hash(password, salt);
   }
 
-  verifyPassword(password: string, hash: string): boolean {
-    return this.hashPassword(password) === hash;
+  async verifyPassword(password: string, hash: string): Promise<boolean> {
+    return await bcrypt.compare(password, hash);
   }
 
   private generateSessionToken(): string {
@@ -251,65 +254,5 @@ class GitHubDatabase {
   }
 }
 
-class QueryBuilder {
-  private db: GitHubDatabase;
-  private tableName: string;
-  private whereConditions: ((item: any) => boolean)[] = [];
-  private orderByField?: string;
-  private orderByDirection: 'asc' | 'desc' = 'asc';
-  private limitCount?: number;
-
-  constructor(db: GitHubDatabase, table: string) {
-    this.db = db;
-    this.tableName = table;
-  }
-
-  where(condition: (item: any) => boolean) {
-    this.whereConditions.push(condition);
-    return this;
-  }
-
-  orderBy(field: string, direction: 'asc' | 'desc' = 'asc') {
-    this.orderByField = field;
-    this.orderByDirection = direction;
-    return this;
-  }
-
-  limit(count: number) {
-    this.limitCount = count;
-    return this;
-  }
-
-  async exec() {
-    const data = await this.db.get(this.tableName);
-    let result = data;
-
-    // Apply where conditions
-    for (const condition of this.whereConditions) {
-      result = result.filter(condition);
-    }
-
-    // Apply ordering
-    if (this.orderByField) {
-      result.sort((a, b) => {
-        const aVal = a[this.orderByField!];
-        const bVal = b[this.orderByField!];
-        
-        if (this.orderByDirection === 'asc') {
-          return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
-        } else {
-          return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
-        }
-      });
-    }
-
-    // Apply limit
-    if (this.limitCount) {
-      result = result.slice(0, this.limitCount);
-    }
-
-    return result;
-  }
-}
 
 export const db = new GitHubDatabase();

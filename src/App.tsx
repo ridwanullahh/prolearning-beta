@@ -9,6 +9,7 @@ import { db } from "./lib/github-sdk";
 import Checkout from "./pages/Checkout";
 import { authService, AuthUser } from "./lib/auth";
 import AuthLayout from "./components/auth/AuthLayout";
+import GoogleCallback from "./pages/auth/GoogleCallback";
 import LearnerDashboard from "./pages/dashboard/LearnerDashboard";
 import InstructorDashboard from "./pages/instruct/InstructorDashboard";
 import SuperAdminDashboard from "./pages/super-admin/SuperAdminDashboard";
@@ -33,6 +34,10 @@ import HelpCenter from "./pages/help/HelpCenter";
 import HelpArticle from "./pages/help/HelpArticle";
 import SupportTicket from "./pages/support/SupportTicket";
 import SuperAdminDashboardHome from "./pages/super-admin/SuperAdminDashboardHome";
+import ContactPage from "./pages/ContactPage";
+import TermsPage from "./pages/TermsPage";
+import AboutPage from "./pages/AboutPage";
+
 
 const queryClient = new QueryClient();
 
@@ -71,91 +76,51 @@ const App = () => {
           <Sonner />
           <BrowserRouter>
             <Routes>
-              {/* Public Routes */}
               <Route path="/" element={<LandingPage />} />
-              <Route path="/checkout" element={<Checkout />} />
               <Route path="/auth/*" element={<AuthLayout />} />
-              <Route path="/marketplace" element={<MarketplacePage />} />
-              <Route path="/course/:id" element={<CourseDetailsPage />} />
+              <Route path="/auth/google/callback" element={<GoogleCallback />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/terms" element={<TermsPage />} />
               <Route path="/blog" element={<BlogArchive />} />
               <Route path="/blog/:slug" element={<BlogPost />} />
               <Route path="/help" element={<HelpCenter />} />
               <Route path="/help/:slug" element={<HelpArticle />} />
               <Route path="/support" element={<SupportTicket />} />
+              <Route path="/marketplace" element={<MarketplacePage />} />
+              <Route path="/course/:courseId" element={<CourseDetailsPage />} />
+              <Route path="/checkout" element={<Checkout />} />
               
-              {/* Protected Learner Routes */}
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute allowedRoles={['learner']}>
-                    <LearnerDashboard />
-                  </ProtectedRoute>
-                }
-              >
+              <Route path="/dashboard" element={
+                <ProtectedRoute allowedRoles={['learner']}>
+                  <LearnerDashboard />
+                </ProtectedRoute>
+              }>
                 <Route index element={<LearnerDashboardHome />} />
                 <Route path="courses" element={<MyCourses />} />
+                <Route path="course/:courseId/view" element={<CourseViewer />} />
               </Route>
-              <Route 
-                path="/my-course/:id" 
-                element={
-                  <ProtectedRoute allowedRoles={['learner']}>
-                    <CourseViewer />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/lesson/:id" 
-                element={
-                  <ProtectedRoute allowedRoles={['learner']}>
-                    <LessonPage />
-                  </ProtectedRoute>
-                } 
-              />
               
-              {/* Protected Instructor Routes */}
-              <Route
-                path="/instruct"
-                element={
-                  <ProtectedRoute allowedRoles={['instructor']}>
-                    <InstructorDashboard />
-                  </ProtectedRoute>
-                }
-              >
+              <Route path="/instruct" element={
+                <ProtectedRoute allowedRoles={['instructor']}>
+                  <InstructorDashboard />
+                </ProtectedRoute>
+              }>
                 <Route index element={<InstructorDashboardHome />} />
                 <Route path="courses" element={<InstructorCourses />} />
-                <Route path="courses/new" element={<CourseBuilder />} />
-                <Route path="courses/:id/edit" element={<CourseBuilder />} />
+                <Route path="course/new" element={<CourseBuilder />} />
+                <Route path="course/:courseId/edit" element={<CourseBuilder />} />
+                <Route path="course/:courseId/lesson/:lessonId/edit" element={<LessonEditor />} />
               </Route>
-              <Route
-                path="/instruct/courses/:courseId/lessons/new"
-                element={
-                  <ProtectedRoute allowedRoles={['instructor']}>
-                    <LessonEditor />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/instruct/courses/:courseId/lessons/:lessonId/edit"
-                element={
-                  <ProtectedRoute allowedRoles={['instructor']}>
-                    <LessonEditor />
-                  </ProtectedRoute>
-                }
-              />
-              
-              {/* Protected Super Admin Routes */}
-              <Route
-                path="/super-admin"
-                element={
-                  <ProtectedRoute allowedRoles={['super_admin']}>
-                    <SuperAdminDashboard />
-                  </ProtectedRoute>
-                }
-              >
+
+              <Route path="/super-admin" element={
+                <ProtectedRoute allowedRoles={['super_admin']}>
+                  <SuperAdminDashboard />
+                </ProtectedRoute>
+              }>
                 <Route index element={<SuperAdminDashboardHome />} />
               </Route>
-              
-              {/* Catch all route */}
+
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
@@ -166,5 +131,3 @@ const App = () => {
 };
 
 export default App;
-
-// This is a test comment

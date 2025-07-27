@@ -1,19 +1,23 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import { db } from '@/lib/github-sdk';
+import { authService } from '@/lib/auth';
 
-interface CartItem {
-    id: string;
+export interface CartItem {
+    courseId: string;
     name: string;
     price: number;
-    // Add other relevant course properties
+    quantity: number;
 }
 
 interface CartContextProps {
     items: CartItem[];
-    addItem: (item: CartItem) => void;
-    removeItem: (itemId: string) => void;
+    addItem: (item: Omit<CartItem, 'quantity'>) => void;
+    removeItem: (courseId: string) => void;
+    updateItemQuantity: (courseId: string, quantity: number) => void;
     clearCart: () => void;
     totalItems: number;
     totalPrice: number;
+    loading: boolean;
 }
 
 const CartContext = createContext<CartContextProps | undefined>(undefined);
@@ -26,88 +30,93 @@ export const useCart = () => {
     return context;
 };
 
-interface CartProviderProps {
-    children: React.ReactNode;
-}
+export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const [items, setItems] = useState<CartItem[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [cartId, setCartId] = useState<string | null>(null);
+    const user = authService.getCurrentUser();
 
-export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
-    const [items, setItems] = useState<CartItem[]>(() => {
-        // Load cart items from local storage on initial load
-        const storedCart = localStorage.getItem('cart');
-        return storedCart ? JSON.parse(storedCart) : [];
-    });
+    const fetchCart = useCallback(async () => {
+        if (!user) {
+            setLoading(false);
+            return;
+        }
+        setLoading(true);
+        try {
+            const userCart = await db.queryBuilder('cart').where(c => c.userId === user.id).first();
+            if (userCart) {
+                setItems(userCart.items);
+                setCartId(userCart.id);
+            } else {
+                const newCart = await db.insert('cart', { userId: user.id, items: [] });
+                setCartId(newCart.id);
+            }
+        } catch (error) {
+            console.error("Error fetching cart:", error);
+        } finally {
+            setLoading(false);
+        }
+    }, [user]);
 
     useEffect(() => {
-        // Save cart items to local storage whenever the cart changes
-        localStorage.setItem('cart', JSON.stringify(items));
-    }, [items]);
+        fetchCart();
+    }, [fetchCart]);
 
-    const addItem = (item: CartItem) => {
-        setItems(prevItems => {
-            const existingItemIndex = prevItems.findIndex(i => i.id === item.id);
-            if (existingItemIndex !== -1) {
-                // Item already exists, update quantity
-                const newItems = [...prevItems];
-                return newItems;
-            } else {
-                // Item doesn't exist, add it to the cart
-                return [...prevItems, item];
+    const updateDbCart = async (newItems: CartItem[]) => {
+        if (cartId) {
+            try {
+                await db.update('cart', cartId, { items: newItems });
+            } catch (error) {
+                console.error("Error updating cart in DB:", error);
             }
+        }
+    };
+
+    const addItem = (item: Omit<CartItem, 'quantity'>) => {
+        setItems(prevItems => {
+            const existingItem = prevItems.find(i => i.courseId === item.courseId);
+            let newItems;
+            if (existingItem) {
+                newItems = prevItems.map(i => i.courseId === item.courseId ? { ...i, quantity: i.quantity + 1 } : i);
+            } else {
+                newItems = [...prevItems, { ...item, quantity: 1 }];
+            }
+            updateDbCart(newItems);
+            return newItems;
         });
     };
 
-    const removeItem = (itemId: string) => {
-        setItems(prevItems => prevItems.filter(item => item.id !== itemId));
+    const removeItem = (courseId: string) => {
+        setItems(prevItems => {
+            const newItems = prevItems.filter(item => item.courseId !== courseId);
+            updateDbCart(newItems);
+            return newItems;
+        });
+    };
+
+    const updateItemQuantity = (courseId: string, quantity: number) => {
+        if (quantity <= 0) {
+            removeItem(courseId);
+            return;
+        }
+        setItems(prevItems => {
+            const newItems = prevItems.map(i => i.courseId === courseId ? { ...i, quantity } : i);
+            updateDbCart(newItems);
+            return newItems;
+        });
     };
 
     const clearCart = () => {
         setItems([]);
+        updateDbCart([]);
     };
 
-    const totalItems = items.reduce((total, item) => total + 1, 0);
-    const totalPrice = items.reduce((total, item) => total + item.price, 0);
-
-    const value: CartContextProps = {
-        items,
-        addItem,
-        removeItem,
-        clearCart,
-        totalItems,
-        totalPrice
-    };
+    const totalItems = items.reduce((total, item) => total + item.quantity, 0);
+    const totalPrice = items.reduce((total, item) => total + item.price * item.quantity, 0);
 
     return (
-        <CartContext.Provider value={value}>
+        <CartContext.Provider value={{ items, addItem, removeItem, updateItemQuantity, clearCart, totalItems, totalPrice, loading }}>
             {children}
         </CartContext.Provider>
     );
 };
-
-
-const Cart = () => {
-    const { items, removeItem, clearCart, totalItems, totalPrice } = useCart();
-
-    if (items.length === 0) {
-        return <p>Your cart is empty.</p>;
-    }
-
-    return (
-        <div>
-            <h2>Cart</h2>
-            <ul>
-                {items.map(item => (
-                    <li key={item.id}>
-                        {item.name} - {item.price}
-                        <button onClick={() => removeItem(item.id)}>Remove</button>
-                    </li>
-                ))}
-            </ul>
-            <p>Total Items: {totalItems}</p>
-            <p>Total Price: {totalPrice}</p>
-            <button onClick={clearCart}>Clear Cart</button>
-            <button>Checkout</button>
-        </div>
-    );
-};
-
-export default Cart;
