@@ -37,6 +37,7 @@ import SuperAdminDashboardHome from "./pages/super-admin/SuperAdminDashboardHome
 import ContactPage from "./pages/ContactPage";
 import TermsPage from "./pages/TermsPage";
 import AboutPage from "./pages/AboutPage";
+import FeaturesPage from "./pages/FeaturesPage";
 
 
 const queryClient = new QueryClient();
@@ -82,6 +83,7 @@ const App = () => {
               <Route path="/about" element={<AboutPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/terms" element={<TermsPage />} />
+              <Route path="/features" element={<FeaturesPage />} />
               <Route path="/blog" element={<BlogArchive />} />
               <Route path="/blog/:slug" element={<BlogPost />} />
               <Route path="/help" element={<HelpCenter />} />
