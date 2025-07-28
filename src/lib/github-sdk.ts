@@ -3,6 +3,7 @@ import UniversalSDK from './universal-sdk';
 import CryptoJS from 'crypto-js';
 import bcrypt from 'bcryptjs';
 import { schema } from './schema';
+import { emailService } from './email-service';
 
 class GitHubDatabase {
   private sdk: UniversalSDK;
@@ -153,6 +154,7 @@ class GitHubDatabase {
       isActive: true
     });
 
+    await emailService.sendWelcomeEmail(user.email, user.name);
     return user;
   }
 
@@ -165,6 +167,7 @@ class GitHubDatabase {
       throw new Error('Invalid credentials');
     }
 
+    await emailService.sendLoginNotificationEmail(user.email);
     return this.createSession(user);
   }
 
@@ -195,6 +198,28 @@ class GitHubDatabase {
 
   destroySession(token: string): boolean {
     return this.sessions.delete(token);
+  }
+
+  async sendPasswordResetLink(email: string): Promise<void> {
+    await this.initialize();
+    const users = await this.sdk.get('users');
+    const user = users.find((u: any) => u.email === email);
+
+    if (!user) {
+      // Don't reveal that the user doesn't exist
+      console.log(`Password reset requested for non-existent user: ${email}`);
+      return;
+    }
+
+    const token = this.generateSessionToken();
+    const expires = new Date(Date.now() + 3600000).toISOString(); // 1 hour
+
+    await this.sdk.update('users', user.id, {
+      resetPasswordToken: token,
+      resetPasswordExpires: expires,
+    });
+
+    await emailService.sendPasswordResetEmail(email, token);
   }
 
   async hashPassword(password: string): Promise<string> {

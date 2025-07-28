@@ -26,8 +26,9 @@ export const config = {
     adminUserId: import.meta.env.VITE_ADMIN_USER_ID || '',
   },
   email: {
-    user: import.meta.env.VITE_EMAIL_USER,
-    pass: import.meta.env.VITE_EMAIL_PASS,
+    user: import.meta.env.VITE_SMTP_USER,
+    pass: import.meta.env.VITE_SMTP_PASS,
+    from: import.meta.env.VITE_SMTP_FROM,
   },
   google: {
     clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
