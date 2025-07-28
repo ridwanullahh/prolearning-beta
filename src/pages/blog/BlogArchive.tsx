@@ -1,12 +1,12 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Calendar, Eye, User } from 'lucide-react';
+import { Search, Calendar, Eye, User, ArrowRight } from 'lucide-react';
 import { db } from '@/lib/github-sdk';
+import { motion } from 'framer-motion';
 
 const BlogArchive = () => {
   const [posts, setPosts] = useState<any[]>([]);
@@ -30,10 +30,7 @@ const BlogArchive = () => {
         .where((post: any) => post.status === 'published')
         .orderBy('publishedAt', 'desc')
         .exec();
-
       setPosts(publishedPosts);
-      
-      // Extract unique categories
       const uniqueCategories = [...new Set(publishedPosts.map((post: any) => post.category).filter(Boolean))];
       setCategories(uniqueCategories);
     } catch (error) {
@@ -44,20 +41,11 @@ const BlogArchive = () => {
   };
 
   const filterPosts = () => {
-    let filtered = posts;
-
-    if (searchTerm) {
-      filtered = filtered.filter(post =>
-        post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        post.excerpt?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        post.tags?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (selectedCategory) {
-      filtered = filtered.filter(post => post.category === selectedCategory);
-    }
-
+    let filtered = posts.filter(post =>
+        (post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+         post.excerpt?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+        (selectedCategory === '' || post.category === selectedCategory)
+    );
     setFilteredPosts(filtered);
   };
 
@@ -66,126 +54,76 @@ const BlogArchive = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          </div>
-        </div>
-      </div>
-    );
+    return <div className="text-center py-20">Loading posts...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
-      <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Blog</h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Discover insights, tips, and updates from our learning platform
-            </p>
-          </div>
+    <div className="bg-gray-50 dark:bg-gray-950">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <motion.div initial={{opacity:0, y:-20}} animate={{opacity:1, y:0}} className="text-center mb-12">
+                <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900 dark:text-white">ProLearning Blog</h1>
+                <p className="mt-4 text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                    Your source for the latest in education technology, learning science, and platform updates.
+                </p>
+            </motion.div>
 
-          {/* Search and Filter */}
-          <div className="mb-8">
-            <div className="flex flex-col md:flex-row gap-4 items-center">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search blog posts..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                <Button
-                  variant={selectedCategory === '' ? 'default' : 'outline'}
-                  onClick={() => setSelectedCategory('')}
-                  size="sm"
-                >
-                  All
-                </Button>
-                {categories.map(category => (
-                  <Button
-                    key={category}
-                    variant={selectedCategory === category ? 'default' : 'outline'}
-                    onClick={() => setSelectedCategory(category)}
-                    size="sm"
-                  >
-                    {category}
-                  </Button>
-                ))}
-              </div>
+            <div className="mb-8 flex flex-col md:flex-row gap-4 items-center">
+                <div className="relative flex-grow w-full md:w-auto">
+                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                    <Input
+                      placeholder="Search articles..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-12 h-12 rounded-full"
+                    />
+                </div>
+                <div className="flex gap-2 flex-wrap justify-center">
+                    <Button variant={selectedCategory === '' ? 'default' : 'outline'} onClick={() => setSelectedCategory('')} className="rounded-full">All</Button>
+                    {categories.map(category => (
+                      <Button key={category} variant={selectedCategory === category ? 'default' : 'outline'} onClick={() => setSelectedCategory(category)} className="rounded-full">{category}</Button>
+                    ))}
+                </div>
             </div>
-          </div>
 
-          {/* Blog Posts Grid */}
-          {filteredPosts.length === 0 ? (
-            <div className="text-center py-12">
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No posts found</h3>
-              <p className="text-gray-600">Try adjusting your search or filter criteria.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredPosts.map((post) => (
-                <Card key={post.id} className="hover:shadow-lg transition-shadow">
-                  {post.featuredImage && (
-                    <div className="aspect-video">
-                      <img
-                        src={post.featuredImage}
-                        alt={post.title}
-                        className="w-full h-full object-cover rounded-t-lg"
-                      />
-                    </div>
-                  )}
-                  <CardHeader>
-                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
-                      <Calendar className="h-4 w-4" />
-                      {new Date(post.publishedAt || post.createdAt).toLocaleDateString()}
-                      {post.viewCount && (
-                        <>
-                          <Eye className="h-4 w-4 ml-2" />
-                          {post.viewCount}
-                        </>
-                      )}
-                    </div>
-                    <CardTitle className="text-xl mb-2">
-                      <Link
-                        to={`/blog/${post.slug || generateSlug(post.title)}`}
-                        className="hover:text-blue-600 transition-colors"
-                      >
-                        {post.title}
-                      </Link>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-600 mb-4 line-clamp-3">
-                      {post.excerpt || post.content.substring(0, 150) + '...'}
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <div className="flex gap-2">
-                        {post.category && (
-                          <Badge variant="secondary">{post.category}</Badge>
-                        )}
-                      </div>
-                      <Link
-                        to={`/blog/${post.slug || generateSlug(post.title)}`}
-                        className="text-blue-600 hover:text-blue-800 font-medium text-sm"
-                      >
-                        Read More →
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filteredPosts.map((post, index) => (
+                <motion.div key={post.id} initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{delay: index * 0.1}}>
+                    <Card className="h-full flex flex-col overflow-hidden rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300">
+                        <CardHeader className="p-0">
+                            <Link to={`/blog/${post.slug || generateSlug(post.title)}`}>
+                                <img src={post.featuredImage || `https://source.unsplash.com/random/500x300?education,${index}`} alt={post.title} className="w-full h-48 object-cover"/>
+                            </Link>
+                        </CardHeader>
+                        <CardContent className="p-6 flex-grow flex flex-col">
+                            <div className="mb-2">
+                                <Badge variant="secondary">{post.category || 'General'}</Badge>
+                            </div>
+                            <CardTitle className="text-xl mb-2 flex-grow">
+                                <Link to={`/blog/${post.slug || generateSlug(post.title)}`} className="hover:text-green-600 transition-colors">{post.title}</Link>
+                            </CardTitle>
+                            <p className="text-gray-500 dark:text-gray-400 text-sm line-clamp-3 mb-4">{post.excerpt}</p>
+                            <div className="text-xs text-gray-500 flex items-center justify-between mt-auto">
+                                <div className="flex items-center gap-2">
+                                    <Calendar className="h-4 w-4" />
+                                    {new Date(post.publishedAt || post.createdAt).toLocaleDateString()}
+                                </div>
+                                <Link to={`/blog/${post.slug || generateSlug(post.title)}`} className="font-semibold text-green-600 hover:text-green-700 flex items-center">
+                                    Read More <ArrowRight className="h-4 w-4 ml-1"/>
+                                </Link>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </motion.div>
               ))}
             </div>
-          )}
+
+            {filteredPosts.length === 0 && (
+                <div className="text-center py-20 col-span-full">
+                    <h3 className="text-2xl font-semibold">No posts found</h3>
+                    <p className="text-gray-500 mt-2">Try a different search or category.</p>
+                </div>
+            )}
         </div>
-      </div>
     </div>
   );
 };

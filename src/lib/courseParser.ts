@@ -235,10 +235,17 @@ export class CourseParser {
         updatedAt: new Date().toISOString()
       });
 
+      const lessonsToInsert: any[] = [];
+      const lessonContentsToInsert: any[] = [];
+      const quizzesToInsert: any[] = [];
+      const flashcardsToInsert: any[] = [];
+      const keyPointsToInsert: any[] = [];
+      const mindMapsToInsert: any[] = [];
+
       // Save lessons and related content
       for (const lessonData of parsedData.lessons) {
         // Create lesson
-        const lesson = await db.insert('lessons', {
+        const lesson = {
           courseId,
           title: lessonData.title,
           description: lessonData.description,
@@ -247,12 +254,15 @@ export class CourseParser {
           type: 'text',
           isRequired: true,
           objectives: lessonData.objectives.join('\n'),
-          isPublished: true
-        });
-
+          isPublished: true,
+          isAiGenerated: true,
+          releaseType: 'immediate'
+        };
+        const insertedLesson = await db.insert('lessons', lesson);
+        
         // Create lesson content
-        await db.insert('lessonContents', {
-          lessonId: lesson.id,
+        lessonContentsToInsert.push({
+          lessonId: insertedLesson.id,
           type: 'rich_text',
           content: lessonData.content,
           order: 1,
@@ -262,12 +272,12 @@ export class CourseParser {
 
         // Save quiz if available
         if (lessonData.quiz) {
-          await db.insert('quizzes', {
-            lessonId: lesson.id,
+          quizzesToInsert.push({
+            lessonId: insertedLesson.id,
             courseId,
             title: lessonData.quiz.title,
             description: lessonData.quiz.description,
-            questions: JSON.stringify(lessonData.quiz.questions),
+            questions: lessonData.quiz.questions,
             totalQuestions: lessonData.quiz.totalQuestions,
             passingScore: lessonData.quiz.passingScore,
             timeLimit: lessonData.quiz.timeLimit || 30,
@@ -279,10 +289,9 @@ export class CourseParser {
 
         // Save flashcards if available
         if (lessonData.flashcards) {
-          for (let i = 0; i < lessonData.flashcards.length; i++) {
-            const flashcard = lessonData.flashcards[i];
-            await db.insert('flashcards', {
-              lessonId: lesson.id,
+          lessonData.flashcards.forEach((flashcard, i) => {
+            flashcardsToInsert.push({
+              lessonId: insertedLesson.id,
               courseId,
               front: flashcard.front,
               back: flashcard.back,
@@ -291,15 +300,14 @@ export class CourseParser {
               hint: flashcard.hint || '',
               explanation: flashcard.explanation || ''
             });
-          }
+          });
         }
 
         // Save key points if available
         if (lessonData.keyPoints) {
-          for (let i = 0; i < lessonData.keyPoints.length; i++) {
-            const keyPoint = lessonData.keyPoints[i];
-            await db.insert('keyPoints', {
-              lessonId: lesson.id,
+          lessonData.keyPoints.forEach((keyPoint, i) => {
+            keyPointsToInsert.push({
+              lessonId: insertedLesson.id,
               courseId,
               point: keyPoint.point,
               explanation: keyPoint.explanation,
@@ -308,21 +316,29 @@ export class CourseParser {
               category: keyPoint.category || 'general',
               examples: keyPoint.examples ? keyPoint.examples.join('\n') : ''
             });
-          }
+          });
         }
 
         // Save mind map if available
         if (lessonData.mindMap) {
-          await db.insert('mindMaps', {
-            lessonId: lesson.id,
+          mindMapsToInsert.push({
+            lessonId: insertedLesson.id,
             courseId,
             title: lessonData.mindMap.title,
-            data: JSON.stringify(lessonData.mindMap.nodes),
+            data: lessonData.mindMap.nodes,
             nodeCount: lessonData.mindMap.nodes.length,
-            connections: JSON.stringify(lessonData.mindMap.nodes.filter(n => n.children && n.children.length > 0))
+            connections: lessonData.mindMap.nodes.filter(n => n.children && n.children.length > 0)
           });
         }
       }
+      
+      // Bulk insert all the things
+      if (lessonContentsToInsert.length > 0) await db.bulkInsert('lessonContents', lessonContentsToInsert);
+      if (quizzesToInsert.length > 0) await db.bulkInsert('quizzes', quizzesToInsert);
+      if (flashcardsToInsert.length > 0) await db.bulkInsert('flashcards', flashcardsToInsert);
+      if (keyPointsToInsert.length > 0) await db.bulkInsert('keyPoints', keyPointsToInsert);
+      if (mindMapsToInsert.length > 0) await db.bulkInsert('mindMaps', mindMapsToInsert);
+      
     } catch (error) {
       console.error('Error saving parsed course to database:', error);
       throw error;

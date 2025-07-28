@@ -241,7 +241,7 @@ export default class UniversalSDK {
     const path = `${this.config.basePath}/${collection}.json`;
     try {
       const file = await this.getFileWithSha(path);
-      if (!file) return [];
+      if (!file || !file.content) return [];
       return JSON.parse(file.content);
     } catch (error: any) {
       if (error.message.includes('404')) {

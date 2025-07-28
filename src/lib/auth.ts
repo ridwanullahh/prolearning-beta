@@ -1,5 +1,7 @@
 
 import { db } from './github-sdk';
+import { emailService } from './email-service';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface AuthUser {
   id: string;
@@ -53,6 +55,9 @@ class AuthService {
       };
 
       this.currentToken = token;
+
+      localStorage.setItem('prolearning-token', token);
+      localStorage.setItem('prolearning-user', JSON.stringify(this.currentUser));
 
       console.log('[AUTH DEBUG] Login successful for user:', this.currentUser.id);
       return this.currentUser;
@@ -135,6 +140,83 @@ class AuthService {
     }
   }
 
+  async forgotPassword(email: string): Promise<void> {
+    const users = await db.get('users');
+    const user = users.find((u: any) => u.email === email);
+
+    if (user) {
+      const token = uuidv4();
+      const expires = new Date(Date.now() + 3600000).toISOString(); // 1 hour from now
+
+      await db.update('users', user.id, {
+        resetPasswordToken: token,
+        resetPasswordExpires: expires,
+      });
+
+      await emailService.sendPasswordResetEmail(email, token);
+    }
+  }
+
+  async resetPassword(token: string, password: string): Promise<void> {
+    const users = await db.get('users');
+    const user = users.find((u: any) => u.resetPasswordToken === token && new Date(u.resetPasswordExpires) > new Date());
+
+    if (!user) {
+      throw new Error('Password reset token is invalid or has expired.');
+    }
+
+    const hashedPassword = await db.hashPassword(password);
+    await db.update('users', user.id, {
+      password: hashedPassword,
+      resetPasswordToken: null,
+      resetPasswordExpires: null,
+    });
+  }
+
+  async handleGoogleCallback(code: string): Promise<AuthUser> {
+    // This is a placeholder. The actual implementation will depend on
+    // how you exchange the code for an access token and user profile.
+    console.log('Handling Google callback with code:', code);
+
+    // 1. Exchange authorization code for access token
+    // 2. Get user profile from Google
+    // 3. Check if user exists in your DB
+    // 4. If not, create a new user
+    // 5. Create a session for the user
+    // 6. Return the AuthUser
+
+    // Placeholder implementation
+    const userProfile = {
+      id: 'google-user-id',
+      email: 'googleuser@example.com',
+      name: 'Google User',
+      role: 'learner' as const,
+    };
+
+    let user = (await db.get('users')).find((u: any) => u.email === userProfile.email);
+    if (!user) {
+      user = await db.register(userProfile.email, '', {
+        name: userProfile.name,
+        role: userProfile.role,
+        googleId: userProfile.id,
+      });
+    }
+
+    const token = db.createSession(user);
+    this.currentToken = token;
+    this.currentUser = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    };
+
+    localStorage.setItem('prolearning-token', token);
+    localStorage.setItem('prolearning-user', JSON.stringify(this.currentUser));
+
+    return this.currentUser;
+  }
+
   async logout(): Promise<void> {
     console.log('[AUTH DEBUG] Logging out user');
     if (this.currentToken) {
@@ -142,11 +224,22 @@ class AuthService {
     }
     this.currentUser = null;
     this.currentToken = null;
+    localStorage.removeItem('prolearning-token');
+    localStorage.removeItem('prolearning-user');
     console.log('[AUTH DEBUG] Logout complete');
   }
 
   getCurrentUser(): AuthUser | null {
     if (this.currentUser) {
+      return this.currentUser;
+    }
+
+    const token = localStorage.getItem('prolearning-token');
+    const user = localStorage.getItem('prolearning-user');
+
+    if (token && user) {
+      this.currentToken = token;
+      this.currentUser = JSON.parse(user);
       return this.currentUser;
     }
 

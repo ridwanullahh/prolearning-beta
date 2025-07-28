@@ -8,7 +8,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { aiService, CourseGenerationOptions } from '@/lib/ai-service';
+import { streamingAIService } from '@/lib/ai-service-streaming';
+import { CourseGenerationOptions } from '@/lib/ai-service';
+import CourseGenerationProgress from './CourseGenerationProgress';
 import { CourseParser } from '@/lib/courseParser';
 import { db } from '@/lib/github-sdk';
 import { authService } from '@/lib/auth';
@@ -27,6 +29,7 @@ interface ExtendedCourseGenerationOptions extends CourseGenerationOptions {
 const CourseGenerationWizard = ({ onCourseGenerated }: CourseGenerationWizardProps) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [progress, setProgress] = useState<any>(null);
   const [formData, setFormData] = useState<ExtendedCourseGenerationOptions>({
     courseTitle: '',
     academicLevel: '',
@@ -125,7 +128,13 @@ const CourseGenerationWizard = ({ onCourseGenerated }: CourseGenerationWizardPro
       }
 
       // Generate the course
-      const generatedCourse = await aiService.generateCourse(formData);
+      // Generate the course using the streaming service
+      const generatedCourse = await streamingAIService.generateCourseWithStreaming(
+        formData,
+        (progressUpdate) => {
+          setProgress(progressUpdate);
+        }
+      );
 
       // Get academic level and subject IDs
       const academicLevels = await db.get('academicLevels');
@@ -164,7 +173,7 @@ const CourseGenerationWizard = ({ onCourseGenerated }: CourseGenerationWizardPro
           objectives: parsedData.course.objectives,
           prerequisites: parsedData.course.prerequisites,
           estimatedTime: `${parsedData.course.estimatedHours} hours`,
-          tags: JSON.stringify([formData.subject, formData.academicLevel, formData.difficulty])
+          tags: [formData.subject, formData.academicLevel, formData.difficulty]
         });
 
         // Save lessons and related content using CourseParser
@@ -529,7 +538,11 @@ const CourseGenerationWizard = ({ onCourseGenerated }: CourseGenerationWizardPro
         <p className="text-sm text-gray-600">Step {currentStep} of {totalSteps}</p>
       </CardHeader>
       <CardContent>
-        {renderStep()}
+        {isGenerating ? (
+          <CourseGenerationProgress progress={progress} />
+        ) : (
+          renderStep()
+        )}
         
         <div className="flex justify-between mt-6">
           <Button

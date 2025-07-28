@@ -1,622 +1,353 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AppHeader, AppSidebar } from '@/components/layout/Sidebar';
+import { SidebarProvider } from '@/components/ui/sidebar';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Save, 
-  Plus, 
-  Trash2, 
-  ArrowLeft, 
-  Eye,
-  Upload,
-  BookOpen,
-  Settings,
-  Users,
-  Edit,
-  Calendar,
-  Clock
-} from 'lucide-react';
-import { db } from '@/lib/github-sdk';
-import { authService } from '@/lib/auth';
+import { Button } from '@/components/ui/button';
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { authService } from '@/lib/auth';
+import { db } from '@/lib/github-sdk';
+import {
+	ArrowLeft,
+	BookOpen,
+	Plus,
+	Save,
+	Settings,
+	Trash2,
+    Info,
+    LayoutGrid,
+    FileText,
+    DollarSign,
+    CheckCircle
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Lesson {
-  id?: string;
-  title: string;
-  description: string;
-  order: number;
-  duration: number;
-  type: string;
-  isRequired: boolean;
-  releaseType: string;
-  scheduledReleaseDate?: string;
-  dripDays: number;
+	id?: string;
+	title: string;
+	description: string;
+	order: number;
 }
 
 const CourseBuilder = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [isEditing, setIsEditing] = useState(!!id);
-  const [loading, setLoading] = useState(false);
-  const [course, setCourse] = useState({
-    title: '',
-    description: '',
-    objectives: '',
-    prerequisites: '',
-    difficulty: 'beginner',
-    duration: 1,
-    price: 0,
-    currency: 'USD',
-    academicLevelId: '',
-    subjectId: '',
-    isPublished: false,
-    prerequisiteCourses: [] as string[]
-  });
-  const [lessons, setLessons] = useState<Lesson[]>([]);
-  const [academicLevels, setAcademicLevels] = useState<any[]>([]);
-  const [subjects, setSubjects] = useState<any[]>([]);
-  const [availableCourses, setAvailableCourses] = useState<any[]>([]);
-  const { toast } = useToast();
-  const user = authService.getCurrentUser();
+	const { id } = useParams();
+	const navigate = useNavigate();
+	const [isEditing, setIsEditing] = useState(!!id);
+	const [loading, setLoading] = useState(false);
+    const [step, setStep] = useState(1);
+	const [course, setCourse] = useState({
+		title: '',
+		description: '',
+		objectives: '',
+		prerequisites: '',
+		difficulty: 'beginner',
+		price: 0,
+		academicLevelId: '',
+		subjectId: '',
+		isPublished: false,
+	});
+	const [lessons, setLessons] = useState<Lesson[]>([]);
+	const [academicLevels, setAcademicLevels] = useState<any[]>([]);
+	const [subjects, setSubjects] = useState<any[]>([]);
+	const { toast } = useToast();
+	const user = authService.getCurrentUser();
 
-  useEffect(() => {
-    loadFormData();
-    if (id) {
-      loadCourse(id);
-    }
-  }, [id]);
+	useEffect(() => {
+		loadFormData();
+		if (id) {
+			loadCourse(id);
+		}
+	}, [id]);
 
-  const loadFormData = async () => {
-    try {
-      const [levelsData, subjectsData, coursesData] = await Promise.all([
-        db.get('academicLevels'),
-        db.get('subjects'),
-        db.queryBuilder('courses')
-          .where((c: any) => c.creatorId !== user?.id && c.isPublished)
-          .exec()
-      ]);
-      setAcademicLevels(levelsData);
-      setSubjects(subjectsData);
-      setAvailableCourses(coursesData);
-    } catch (error) {
-      console.error('Error loading form data:', error);
-    }
-  };
+	const loadFormData = async () => {
+		try {
+			const [levelsData, subjectsData] = await Promise.all([
+				db.get('academicLevels'),
+				db.get('subjects'),
+			]);
+			setAcademicLevels(levelsData);
+			setSubjects(subjectsData);
+		} catch (error) {
+			console.error('Error loading form data:', error);
+		}
+	};
 
-  const loadCourse = async (courseId: string) => {
-    try {
-      const [courseData, lessonsData, academicLevelsData, subjectsData] = await Promise.all([
-        db.getItem('courses', courseId),
-        db.queryBuilder('lessons')
-          .where((lesson: any) => lesson.courseId === courseId)
-          .orderBy('order', 'asc')
-          .exec(),
-        db.get('academicLevels'),
-        db.get('subjects')
-      ]);
+	const loadCourse = async (courseId: string) => {
+		try {
+			const [courseData, lessonsData] = await Promise.all([
+				db.getItem('courses', courseId),
+				db.queryBuilder('lessons').where((lesson: any) => lesson.courseId === courseId).orderBy('order', 'asc').exec(),
+			]);
 
-      if (courseData) {
-        setCourse({
-          title: courseData.title || '',
-          description: courseData.description || '',
-          objectives: courseData.objectives || '',
-          prerequisites: courseData.prerequisites || '',
-          difficulty: courseData.difficulty || 'beginner',
-          duration: courseData.duration || 1,
-          price: courseData.price || 0,
-          currency: courseData.currency || 'USD',
-          academicLevelId: courseData.academicLevelId || '',
-          subjectId: courseData.subjectId || '',
-          isPublished: courseData.isPublished || false,
-          prerequisiteCourses: JSON.parse(courseData.prerequisiteCourses || '[]')
-        });
-        
-        const mappedLessons: Lesson[] = lessonsData.map((lesson: any) => ({
-          id: lesson.id,
-          title: lesson.title || '',
-          description: lesson.description || '',
-          order: lesson.order || 1,
-          duration: lesson.duration || 30,
-          type: lesson.type || 'text',
-          isRequired: lesson.isRequired !== false,
-          releaseType: lesson.releaseType || 'immediate',
-          scheduledReleaseDate: lesson.scheduledReleaseDate,
-          dripDays: lesson.dripDays || 0
-        }));
-        setLessons(mappedLessons);
-      }
-    } catch (error) {
-      console.error('Error loading course:', error);
-    }
-  };
+			if (courseData) {
+				setCourse(courseData);
+				setLessons(lessonsData);
+			}
+		} catch (error) {
+			console.error('Error loading course:', error);
+		}
+	};
 
-  const saveCourse = async () => {
-    if (!user) return;
+	const saveCourse = async () => {
+		if (!user) return;
 
-    try {
-      setLoading(true);
+		try {
+			setLoading(true);
+			const courseData = { ...course, creatorId: user.id, updatedAt: new Date().toISOString() };
 
-      const courseData = {
-        ...course,
-        creatorId: user.id,
-        creatorType: 'instructor',
-        isAiGenerated: false,
-        prerequisiteCourses: JSON.stringify(course.prerequisiteCourses),
-        updatedAt: new Date().toISOString()
-      };
+			if (isEditing && id) {
+				await db.update('courses', id, courseData);
+			} else {
+				const newCourse = await db.insert('courses', courseData);
+				setIsEditing(true);
+                navigate(`/instruct/courses/${newCourse.id}/edit`, { replace: true });
+			}
 
-      let savedCourse;
-      if (isEditing && id) {
-        savedCourse = await db.update('courses', id, courseData);
-        savedCourse.id = id;
-      } else {
-        savedCourse = await db.insert('courses', courseData);
-        setIsEditing(true);
-        navigate(`/instruct/courses/${savedCourse.id}/edit`, { replace: true });
-      }
+			toast({ title: 'Success', description: 'Course saved successfully' });
+		} catch (error) {
+			console.error('Error saving course:', error);
+			toast({ title: 'Error', description: 'Failed to save course', variant: 'destructive' });
+		} finally {
+			setLoading(false);
+		}
+	};
 
-      toast({
-        title: 'Success',
-        description: 'Course saved successfully',
-      });
+    const handleNextStep = () => setStep(s => Math.min(s + 1, 4));
+    const handlePrevStep = () => setStep(s => Math.max(s - 1, 1));
 
-    } catch (error) {
-      console.error('Error saving course:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save course',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    const steps = [
+        { id: 1, name: 'Course Info', icon: Info },
+        { id: 2, name: 'Curriculum', icon: LayoutGrid },
+        { id: 3, name: 'Details', icon: FileText },
+        { id: 4, name: 'Pricing & Publish', icon: DollarSign },
+    ];
 
-  const publishCourse = async () => {
-    try {
-      setLoading(true);
-      
-      if (!id) {
-        await saveCourse();
-        return;
-      }
-
-      await db.update('courses', id, {
-        isPublished: !course.isPublished,
-        updatedAt: new Date().toISOString()
-      });
-
-      setCourse(prev => ({ ...prev, isPublished: !prev.isPublished }));
-      
-      toast({
-        title: 'Success',
-        description: `Course ${course.isPublished ? 'unpublished' : 'published'} successfully`,
-      });
-    } catch (error) {
-      console.error('Error publishing course:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update course status',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const createNewLesson = () => {
-    if (!id) {
-      toast({
-        title: 'Save Course First',
-        description: 'Please save your course before adding lessons',
-        variant: 'destructive'
-      });
-      return;
-    }
-    navigate(`/instruct/courses/${id}/lessons/new`);
-  };
-
-  const editLesson = (lessonId: string) => {
-    navigate(`/instruct/courses/${id}/lessons/${lessonId}/edit`);
-  };
-
-  const deleteLesson = async (lessonId: string) => {
-    try {
-      await db.delete('lessons', lessonId);
-      setLessons(prev => prev.filter(l => l.id !== lessonId));
-      toast({
-        title: 'Success',
-        description: 'Lesson deleted successfully',
-      });
-    } catch (error) {
-      console.error('Error deleting lesson:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete lesson',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const togglePrerequisiteCourse = (courseId: string) => {
-    setCourse(prev => ({
-      ...prev,
-      prerequisiteCourses: prev.prerequisiteCourses.includes(courseId)
-        ? prev.prerequisiteCourses.filter(id => id !== courseId)
-        : [...prev.prerequisiteCourses, courseId]
-    }));
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
-      <div className="container mx-auto px-4 py-6">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
+	return (
+        <div className="p-4 md:p-6 space-y-6">
             <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                onClick={() => navigate('/instruct/courses')}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Courses
-              </Button>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  {isEditing ? 'Edit Course' : 'Create New Course'}
-                </h1>
-                <p className="text-gray-600">
-                  {isEditing ? 'Update your course content' : 'Build your course from scratch'}
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              {isEditing && (
-                <>
-                  <Badge variant={course.isPublished ? 'default' : 'secondary'}>
-                    {course.isPublished ? 'Published' : 'Draft'}
-                  </Badge>
-                  <Button
-                    variant="outline"
-                    onClick={publishCourse}
-                    disabled={loading}
-                  >
-                    {course.isPublished ? 'Unpublish' : 'Publish'}
-                  </Button>
-                </>
-              )}
-              <Button onClick={saveCourse} disabled={loading}>
-                <Save className="mr-2 h-4 w-4" />
-                Save Course
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Course Builder */}
-        <Tabs defaultValue="basic" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="basic" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Basic Info
-            </TabsTrigger>
-            <TabsTrigger value="lessons" className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4" />
-              Lessons
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Settings
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="basic" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Course Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="title">Course Title</Label>
-                    <Input
-                      id="title"
-                      value={course.title}
-                      onChange={(e) => setCourse(prev => ({ ...prev, title: e.target.value }))}
-                      placeholder="Enter course title"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="difficulty">Difficulty Level</Label>
-                    <select
-                      id="difficulty"
-                      value={course.difficulty}
-                      onChange={(e) => setCourse(prev => ({ ...prev, difficulty: e.target.value }))}
-                      className="w-full p-2 border border-gray-300 rounded-md"
-                    >
-                      <option value="beginner">Beginner</option>
-                      <option value="intermediate">Intermediate</option>
-                      <option value="advanced">Advanced</option>
-                    </select>
-                  </div>
-                </div>
-
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => navigate('/instruct/courses')}>
+                    <ArrowLeft className="h-4 w-4" />
+                </Button>
                 <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={course.description}
-                    onChange={(e) => setCourse(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Describe what students will learn in this course"
-                    rows={4}
-                  />
+                    <h1 className="text-2xl font-bold tracking-tight">{isEditing ? `Edit: ${course.title}` : 'Create New Course'}</h1>
+                    <p className="text-muted-foreground">Follow the steps to build your course.</p>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="academicLevel">Academic Level</Label>
-                    <select
-                      id="academicLevel"
-                      value={course.academicLevelId}
-                      onChange={(e) => setCourse(prev => ({ ...prev, academicLevelId: e.target.value }))}
-                      className="w-full p-2 border border-gray-300 rounded-md"
-                    >
-                      <option value="">Select Academic Level</option>
-                      {academicLevels.map(level => (
-                        <option key={level.id} value={level.id}>
-                          {level.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="subject">Subject</Label>
-                    <select
-                      id="subject"
-                      value={course.subjectId}
-                      onChange={(e) => setCourse(prev => ({ ...prev, subjectId: e.target.value }))}
-                      className="w-full p-2 border border-gray-300 rounded-md"
-                    >
-                      <option value="">Select Subject</option>
-                      {subjects.map(subject => (
-                        <option key={subject.id} value={subject.id}>
-                          {subject.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="duration">Duration (hours)</Label>
-                    <Input
-                      id="duration"
-                      type="number"
-                      value={course.duration}
-                      onChange={(e) => setCourse(prev => ({ ...prev, duration: parseInt(e.target.value) }))}
-                      min="1"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="price">Price</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      value={course.price}
-                      onChange={(e) => setCourse(prev => ({ ...prev, price: parseFloat(e.target.value) }))}
-                      min="0"
-                      step="0.01"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="currency">Currency</Label>
-                    <select
-                      id="currency"
-                      value={course.currency}
-                      onChange={(e) => setCourse(prev => ({ ...prev, currency: e.target.value }))}
-                      className="w-full p-2 border border-gray-300 rounded-md"
-                    >
-                      <option value="USD">USD</option>
-                      <option value="NGN">NGN</option>
-                      <option value="EUR">EUR</option>
-                      <option value="GBP">GBP</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="objectives">Learning Objectives</Label>
-                  <Textarea
-                    id="objectives"
-                    value={course.objectives}
-                    onChange={(e) => setCourse(prev => ({ ...prev, objectives: e.target.value }))}
-                    placeholder="What will students achieve after completing this course?"
-                    rows={3}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="prerequisites">Prerequisites</Label>
-                  <Textarea
-                    id="prerequisites"
-                    value={course.prerequisites}
-                    onChange={(e) => setCourse(prev => ({ ...prev, prerequisites: e.target.value }))}
-                    placeholder="What should students know before taking this course?"
-                    rows={3}
-                  />
-                </div>
-
-                {/* Prerequisite Courses */}
-                <div>
-                  <Label>Prerequisite Courses (Optional)</Label>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Select courses that students must complete before taking this course
-                  </p>
-                  <div className="max-h-48 overflow-y-auto border rounded-md p-3 space-y-2">
-                    {availableCourses.map(availableCourse => (
-                      <div key={availableCourse.id} className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id={`prereq-${availableCourse.id}`}
-                          checked={course.prerequisiteCourses.includes(availableCourse.id)}
-                          onChange={() => togglePrerequisiteCourse(availableCourse.id)}
-                          className="rounded border-gray-300"
-                        />
-                        <label 
-                          htmlFor={`prereq-${availableCourse.id}`}
-                          className="text-sm flex-1 cursor-pointer"
-                        >
-                          {availableCourse.title}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="lessons" className="mt-6">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Course Lessons</CardTitle>
-                  <Button onClick={createNewLesson}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Lesson
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {lessons.length === 0 ? (
-                  <div className="text-center py-8">
-                    <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No lessons yet</h3>
-                    <p className="text-gray-600 mb-4">Start building your course by adding lessons</p>
-                    <Button onClick={createNewLesson}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Your First Lesson
+                <div className="ml-auto flex items-center gap-2">
+                    <Button variant="outline" onClick={saveCourse} disabled={loading}>
+                        <Save className="mr-2 h-4 w-4" /> Save Draft
                     </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {lessons.map((lesson) => (
-                      <Card key={lesson.id} className="border-l-4 border-l-blue-600">
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <h4 className="font-medium">Lesson {lesson.order}: {lesson.title}</h4>
-                                <Badge variant="outline" className="text-xs">
-                                  {lesson.duration} min
-                                </Badge>
-                                {lesson.releaseType === 'scheduled' && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    <Calendar className="h-3 w-3 mr-1" />
-                                    Scheduled
-                                  </Badge>
-                                )}
-                                {lesson.releaseType === 'drip' && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    <Clock className="h-3 w-3 mr-1" />
-                                    Drip: Day {lesson.dripDays}
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-sm text-gray-600">{lesson.description}</p>
-                            </div>
-                            
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => editLesson(lesson.id!)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => deleteLesson(lesson.id!)}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="settings" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Course Settings</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Publishing Settings</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <h4 className="font-medium">Course Visibility</h4>
-                        <p className="text-sm text-gray-600">
-                          {course.isPublished ? 'Your course is visible to students' : 'Your course is in draft mode'}
-                        </p>
-                      </div>
-                      <Badge variant={course.isPublished ? 'default' : 'secondary'}>
-                        {course.isPublished ? 'Published' : 'Draft'}
-                      </Badge>
-                    </div>
-                  </div>
+                    <Button onClick={saveCourse} disabled={loading}>
+                        <CheckCircle className="mr-2 h-4 w-4" /> Publish Course
+                    </Button>
                 </div>
+            </div>
 
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Course Statistics</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card>
-                      <CardContent className="p-4 text-center">
-                        <div className="text-2xl font-bold text-blue-600">0</div>
-                        <p className="text-sm text-gray-600">Enrolled Students</p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-4 text-center">
-                        <div className="text-2xl font-bold text-green-600">0%</div>
-                        <p className="text-sm text-gray-600">Completion Rate</p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-4 text-center">
-                        <div className="text-2xl font-bold text-yellow-600">0</div>
-                        <p className="text-sm text-gray-600">Average Rating</p>
-                      </CardContent>
-                    </Card>
-                  </div>
+            <div className="flex flex-col lg:flex-row gap-8">
+                <nav className="lg:w-64">
+                    <ol className="space-y-4">
+                        {steps.map((s) => (
+                            <li key={s.id}>
+                                <div
+                                    onClick={() => setStep(s.id)}
+                                    className={`group flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all ${step === s.id ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                                >
+                                    <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-2 ${step === s.id ? 'border-primary-foreground' : 'border-primary'}`}>
+                                        <s.icon className={`h-5 w-5 ${step === s.id ? '' : 'text-primary'}`} />
+                                    </div>
+                                    <p className="font-medium">{s.name}</p>
+                                </div>
+                            </li>
+                        ))}
+                    </ol>
+                </nav>
+
+                <div className="flex-1">
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={step}
+                            initial={{ y: 10, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: -10, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            {step === 1 && <CourseInfoStep course={course} setCourse={setCourse} />}
+                            {step === 2 && <CurriculumStep courseId={id} lessons={lessons} setLessons={setLessons} />}
+                            {step === 3 && <DetailsStep course={course} setCourse={setCourse} academicLevels={academicLevels} subjects={subjects} />}
+                            {step === 4 && <PricingStep course={course} setCourse={setCourse} />}
+                        </motion.div>
+                    </AnimatePresence>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </div>
-  );
+            </div>
+  </div>
+ );
 };
+
+const CourseInfoStep = ({ course, setCourse }: { course: any, setCourse: any }) => (
+    <Card>
+        <CardHeader>
+            <CardTitle>Course Information</CardTitle>
+            <CardDescription>Start with the basics. What is your course about?</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+            <div className="space-y-2">
+                <Label htmlFor="title">Course Title</Label>
+                <Input id="title" value={course.title} onChange={(e) => setCourse((p: any) => ({ ...p, title: e.target.value }))} placeholder="e.g., Introduction to Web Development" />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="description">Course Description</Label>
+                <Textarea id="description" value={course.description} onChange={(e) => setCourse((p: any) => ({ ...p, description: e.target.value }))} placeholder="A brief summary of your course." rows={5}/>
+            </div>
+             <div className="space-y-2">
+                <Label htmlFor="objectives">Learning Objectives</Label>
+                <Textarea id="objectives" value={course.objectives} onChange={(e) => setCourse((p: any) => ({ ...p, objectives: e.target.value }))} placeholder="List what students will be able to do after completing the course (one per line)." rows={5}/>
+            </div>
+        </CardContent>
+    </Card>
+);
+
+const CurriculumStep = ({ courseId, lessons, setLessons }: { courseId: any, lessons: any, setLessons: any }) => {
+    const navigate = useNavigate();
+    const { toast } = useToast();
+    
+    const handleAddLesson = () => {
+        if (!courseId) {
+            toast({ title: "Save Course First", description: "Please save the course details before adding lessons.", variant: "destructive" });
+            return;
+        }
+        navigate(`/instruct/courses/${courseId}/lessons/new`);
+    };
+
+    const handleEditLesson = (lessonId: any) => {
+        navigate(`/instruct/courses/${courseId}/lessons/${lessonId}/edit`);
+    };
+
+    const handleDeleteLesson = async (lessonId: any) => {
+        if (!confirm("Are you sure you want to delete this lesson?")) return;
+        try {
+            await db.delete('lessons', lessonId);
+            setLessons((prev: any[]) => prev.filter(l => l.id !== lessonId));
+            toast({ title: "Success", description: "Lesson deleted." });
+        } catch (e) {
+            toast({ title: "Error", description: "Could not delete lesson.", variant: "destructive" });
+        }
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Course Curriculum</CardTitle>
+                <CardDescription>Structure your course by adding lessons and modules.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-4">
+                    {lessons.map((lesson, index) => (
+                        <div key={lesson.id || index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                                <BookOpen className="h-5 w-5 text-muted-foreground"/>
+                                <div>
+                                    <p className="font-semibold">Lesson {index + 1}: {lesson.title}</p>
+                                    <p className="text-sm text-muted-foreground">{lesson.description}</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <Button variant="outline" size="sm" onClick={() => handleEditLesson(lesson.id)}><Settings className="h-4 w-4"/></Button>
+                                <Button variant="destructive" size="sm" onClick={() => handleDeleteLesson(lesson.id)}><Trash2 className="h-4 w-4"/></Button>
+                            </div>
+                        </div>
+                    ))}
+                    <Button variant="outline" className="w-full" onClick={handleAddLesson}>
+                        <Plus className="mr-2 h-4 w-4"/> Add Lesson
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
+    );
+};
+
+const DetailsStep = ({ course, setCourse, academicLevels, subjects }: { course: any, setCourse: any, academicLevels: any[], subjects: any[] }) => (
+    <Card>
+        <CardHeader>
+            <CardTitle>Additional Details</CardTitle>
+            <CardDescription>Provide more context for your students.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+            <div className="space-y-2">
+                <Label>Difficulty</Label>
+                <Select value={course.difficulty} onValueChange={(v) => setCourse((p: any) => ({...p, difficulty: v}))}>
+                    <SelectTrigger><SelectValue/></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="beginner">Beginner</SelectItem>
+                        <SelectItem value="intermediate">Intermediate</SelectItem>
+                        <SelectItem value="advanced">Advanced</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="space-y-2">
+                <Label>Academic Level</Label>
+                <Select value={course.academicLevelId} onValueChange={(v) => setCourse((p: any) => ({...p, academicLevelId: v}))}>
+                    <SelectTrigger><SelectValue/></SelectTrigger>
+                    <SelectContent>
+                        {academicLevels.map(level => <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="space-y-2">
+                <Label>Subject</Label>
+                <Select value={course.subjectId} onValueChange={(v) => setCourse((p: any) => ({...p, subjectId: v}))}>
+                    <SelectTrigger><SelectValue/></SelectTrigger>
+                    <SelectContent>
+                        {subjects.map(subject => <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="prerequisites">Prerequisites</Label>
+                <Textarea id="prerequisites" value={course.prerequisites} onChange={(e) => setCourse((p: any) => ({...p, prerequisites: e.target.value}))} placeholder="List any required skills or courses." rows={4}/>
+            </div>
+        </CardContent>
+    </Card>
+);
+
+const PricingStep = ({ course, setCourse }: { course: any, setCourse: any }) => (
+    <Card>
+        <CardHeader>
+            <CardTitle>Pricing and Publishing</CardTitle>
+            <CardDescription>Set a price for your course and make it available to students.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+            <div className="space-y-2">
+                <Label htmlFor="price">Price (USD)</Label>
+                <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
+                    <Input id="price" type="number" value={course.price} onChange={(e) => setCourse((p: any) => ({...p, price: parseFloat(e.target.value) || 0}))} className="pl-10" placeholder="0.00"/>
+                </div>
+            </div>
+            <div className="flex items-center space-x-2">
+                <input type="checkbox" id="isPublished" checked={course.isPublished} onChange={(e) => setCourse((p: any) => ({...p, isPublished: e.target.checked}))} className="h-4 w-4"/>
+                <Label htmlFor="isPublished" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Publish this course
+                </Label>
+            </div>
+            <p className="text-sm text-muted-foreground">Once published, students will be able to enroll in your course.</p>
+        </CardContent>
+    </Card>
+);
 
 export default CourseBuilder;

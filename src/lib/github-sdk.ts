@@ -1,6 +1,9 @@
 import { config } from './config';
 import UniversalSDK from './universal-sdk';
 import CryptoJS from 'crypto-js';
+import bcrypt from 'bcryptjs';
+import { schema } from './schema';
+import { emailService } from './email-service';
 
 class GitHubDatabase {
   private sdk: UniversalSDK;
@@ -59,6 +62,7 @@ class GitHubDatabase {
 
   async insert(table: string, data: any) {
     await this.initialize();
+    this.validate(table, data);
     const item = {
       ...data,
       createdAt: new Date().toISOString(),
@@ -70,8 +74,25 @@ class GitHubDatabase {
     return result;
   }
 
+  async bulkInsert(table: string, data: any[]) {
+    await this.initialize();
+    const items = data.map(d => {
+      this.validate(table, d);
+      return {
+        ...d,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    });
+    
+    const result = await this.sdk.bulkInsert(table, items);
+    console.log(`Bulk inserted into ${table}:`, result);
+    return result;
+  }
+
   async update(table: string, id: string, data: any) {
     await this.initialize();
+    this.validate(table, data);
     try {
       const updatedData = {
         ...data,
@@ -110,7 +131,7 @@ class GitHubDatabase {
   }
 
   queryBuilder(table: string) {
-    return new QueryBuilder(this, table);
+    return this.sdk.queryBuilder(table);
   }
 
   // Authentication methods
@@ -123,7 +144,7 @@ class GitHubDatabase {
       throw new Error('User already exists');
     }
 
-    const hashedPassword = this.hashPassword(password);
+    const hashedPassword = await this.hashPassword(password);
     const user = await this.sdk.insert('users', {
       email,
       password: hashedPassword,
@@ -133,6 +154,7 @@ class GitHubDatabase {
       isActive: true
     });
 
+    await emailService.sendWelcomeEmail(user.email, user.name);
     return user;
   }
 
@@ -141,10 +163,11 @@ class GitHubDatabase {
     const users = await this.sdk.get('users');
     const user = users.find((u: any) => u.email === email);
     
-    if (!user || !this.verifyPassword(password, user.password)) {
+    if (!user || !await this.verifyPassword(password, user.password)) {
       throw new Error('Invalid credentials');
     }
 
+    await emailService.sendLoginNotificationEmail(user.email);
     return this.createSession(user);
   }
 
@@ -177,12 +200,36 @@ class GitHubDatabase {
     return this.sessions.delete(token);
   }
 
-  hashPassword(password: string): string {
-    return CryptoJS.SHA256(password).toString();
+  async sendPasswordResetLink(email: string): Promise<void> {
+    await this.initialize();
+    const users = await this.sdk.get('users');
+    const user = users.find((u: any) => u.email === email);
+
+    if (!user) {
+      // Don't reveal that the user doesn't exist
+      console.log(`Password reset requested for non-existent user: ${email}`);
+      return;
+    }
+
+    const token = this.generateSessionToken();
+    const expires = new Date(Date.now() + 3600000).toISOString(); // 1 hour
+
+    await this.sdk.update('users', user.id, {
+      resetPasswordToken: token,
+      resetPasswordExpires: expires,
+    });
+
+    await emailService.sendPasswordResetEmail(email, token);
   }
 
-  verifyPassword(password: string, hash: string): boolean {
-    return this.hashPassword(password) === hash;
+  async hashPassword(password: string): Promise<string> {
+    const saltRounds = 10;
+    const salt = await bcrypt.genSalt(saltRounds);
+    return await bcrypt.hash(password, salt);
+  }
+
+  async verifyPassword(password: string, hash: string): Promise<boolean> {
+    return await bcrypt.compare(password, hash);
   }
 
   private generateSessionToken(): string {
@@ -192,67 +239,45 @@ class GitHubDatabase {
   private generateId(): string {
     return Math.random().toString(36).substr(2, 9);
   }
-}
-
-class QueryBuilder {
-  private db: GitHubDatabase;
-  private tableName: string;
-  private whereConditions: ((item: any) => boolean)[] = [];
-  private orderByField?: string;
-  private orderByDirection: 'asc' | 'desc' = 'asc';
-  private limitCount?: number;
-
-  constructor(db: GitHubDatabase, table: string) {
-    this.db = db;
-    this.tableName = table;
-  }
-
-  where(condition: (item: any) => boolean) {
-    this.whereConditions.push(condition);
-    return this;
-  }
-
-  orderBy(field: string, direction: 'asc' | 'desc' = 'asc') {
-    this.orderByField = field;
-    this.orderByDirection = direction;
-    return this;
-  }
-
-  limit(count: number) {
-    this.limitCount = count;
-    return this;
-  }
-
-  async exec() {
-    const data = await this.db.get(this.tableName);
-    let result = data;
-
-    // Apply where conditions
-    for (const condition of this.whereConditions) {
-      result = result.filter(condition);
+  validate(table: string, data: any) {
+    const tableSchema = (schema as any)[table];
+    if (!tableSchema) {
+      // No schema defined for this table, so we can't validate.
+      // In a stricter environment, you might want to throw an error here.
+      console.warn(`No schema found for table: ${table}. Skipping validation.`);
+      return;
     }
 
-    // Apply ordering
-    if (this.orderByField) {
-      result.sort((a, b) => {
-        const aVal = a[this.orderByField!];
-        const bVal = b[this.orderByField!];
-        
-        if (this.orderByDirection === 'asc') {
-          return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
-        } else {
-          return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
+    for (const key in tableSchema) {
+      if (tableSchema.hasOwnProperty(key)) {
+        const expectedType = tableSchema[key];
+        const actualType = typeof data[key];
+
+        // Allow for missing optional fields (e.g. not passing 'updatedAt' on insert)
+        if (!data.hasOwnProperty(key)) {
+          continue;
         }
-      });
+        
+        // Special case for 'array' and 'object', since typeof returns 'object' for both
+        if (expectedType === 'array' && !Array.isArray(data[key])) {
+          throw new Error(`Invalid type for ${key} in ${table}. Expected array, got ${actualType}`);
+        } else if (expectedType === 'object' && actualType !== 'object') {
+          if (data[key] === null) continue; // Allow null for objects
+          throw new Error(`Invalid type for ${key} in ${table}. Expected object, got ${actualType}`);
+        } else if (expectedType === 'object' && Array.isArray(data[key])) {
+          //This is a special case for mindmap data which can be an array or object
+          if(table === 'mindMaps' && key === 'data'){
+            continue;
+          }
+          throw new Error(`Invalid type for ${key} in ${table}. Expected object, got array`);
+        }
+        else if (expectedType !== 'array' && expectedType !== 'object' && actualType !== expectedType) {
+          throw new Error(`Invalid type for ${key} in ${table}. Expected ${expectedType}, got ${actualType}`);
+        }
+      }
     }
-
-    // Apply limit
-    if (this.limitCount) {
-      result = result.slice(0, this.limitCount);
-    }
-
-    return result;
   }
 }
+
 
 export const db = new GitHubDatabase();

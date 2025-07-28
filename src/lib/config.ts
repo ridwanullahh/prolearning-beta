@@ -1,13 +1,13 @@
 // Environment configuration
 export const config = {
   github: {
-    owner: import.meta.env.VITE_GITHUB_OWNER || 'your-github-username',
-    repo: import.meta.env.VITE_GITHUB_REPO || 'prolearning-db',
-    token: import.meta.env.VITE_GITHUB_TOKEN || 'your-github-token',
+    owner: import.meta.env.VITE_GITHUB_OWNER,
+    repo: import.meta.env.VITE_GITHUB_REPO,
+    token: import.meta.env.VITE_GITHUB_TOKEN,
   },
   ai: {
     chutesToken: import.meta.env.VITE_CHUTES_API_TOKEN || '',
-    geminiKey: import.meta.env.VITE_GOOGLE_AI_API_KEY || '',
+    geminiKey: import.meta.env.VITE_GEMINI_AI_KEY || 'AIzaSyBc0N-5GmNRED_voJJOm6hJsJIfL5XMPUM',
     cloudflareAccountId: import.meta.env.VITE_CLOUDFLARE_ACCOUNT_ID || '',
     cloudflareToken: import.meta.env.VITE_CLOUDFLARE_API_TOKEN || '',
     openai: import.meta.env.VITE_OPENAI_API_KEY || '',
@@ -18,10 +18,21 @@ export const config = {
   payment: {
     paystackPublicKey: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || '',
     paystackSecretKey: import.meta.env.VITE_PAYSTACK_SECRET_KEY || '',
+    platformCommission: parseFloat(import.meta.env.VITE_PLATFORM_COMMISSION || '15'),
   },
   app: {
     url: import.meta.env.VITE_APP_URL || 'http://localhost:5173',
     apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5173/api',
+    adminUserId: import.meta.env.VITE_ADMIN_USER_ID || '',
+  },
+  email: {
+    user: import.meta.env.VITE_SMTP_USER,
+    pass: import.meta.env.VITE_SMTP_PASS,
+    from: import.meta.env.VITE_SMTP_FROM,
+  },
+  google: {
+    clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+    clientSecret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET,
   },
 };
 
@@ -44,10 +55,4 @@ export const COUNTRY_CURRENCY_MAP: Record<string, string> = {
   'United Kingdom': 'GBP',
   'Canada': 'CAD',
   'Australia': 'AUD',
-  'Germany': 'EUR',
-  'France': 'EUR',
-  'India': 'INR',
-  'South Africa': 'ZAR',
-  'Kenya': 'KES',
-  'Ghana': 'GHS',
 };
