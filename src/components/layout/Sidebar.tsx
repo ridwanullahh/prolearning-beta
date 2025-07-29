@@ -53,6 +53,7 @@ const learnerNavItems = [
   { href: '/marketplace', label: 'Marketplace', icon: ShoppingBag, badge: 'New' },
   { href: '/achievements', label: 'Achievements', icon: Trophy, badge: null },
   { href: '/progress', label: 'Progress', icon: BarChart3, badge: null },
+  { href: '/dashboard/settings', label: 'Settings', icon: Settings, badge: null },
 ];
 
 const instructorNavItems = [
@@ -61,6 +62,7 @@ const instructorNavItems = [
   { href: '/instruct/courses/new', label: 'Create Course', icon: Plus, badge: null },
   { href: '/instruct/students', label: 'Students', icon: Users, badge: null },
   { href: '/instruct/analytics', label: 'Analytics', icon: BarChart3, badge: null },
+  { href: '/instruct/settings', label: 'Settings', icon: Settings, badge: null },
 ];
 
 const adminNavItems = [
@@ -68,6 +70,8 @@ const adminNavItems = [
   { href: '/super-admin/users', label: 'Users', icon: Users, badge: null },
   { href: '/super-admin/courses', label: 'Courses', icon: BookOpen, badge: null },
   { href: '/super-admin/analytics', label: 'Analytics', icon: BarChart3, badge: null },
+  { href: '/super-admin/instructor-approvals', label: 'Instructor Approvals', icon: Users, badge: null },
+  { href: '/super-admin/qualification-approvals', label: 'Qualification Approvals', icon: GraduationCap, badge: null },
   { href: '/super-admin/settings', label: 'Settings', icon: Settings, badge: null },
 ];
 

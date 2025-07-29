@@ -11,6 +11,11 @@ export interface AuthUser {
   avatar?: string;
   country?: string;
   currency?: string;
+  onboardingCompleted?: boolean;
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+  profile?: any;
+  instructorProfile?: any;
+  createdAt?: string;
 }
 
 class AuthService {
@@ -51,7 +56,12 @@ class AuthService {
         role: user.role as 'learner' | 'instructor' | 'super_admin',
         avatar: user.avatar,
         country: user.country,
-        currency: user.currency
+        currency: user.currency,
+        onboardingCompleted: user.onboardingCompleted,
+        approvalStatus: user.approvalStatus,
+        profile: user.profile,
+        instructorProfile: user.instructorProfile,
+        createdAt: user.createdAt
       };
 
       this.currentToken = token;
@@ -129,7 +139,12 @@ class AuthService {
         role: user.role,
         avatar: user.avatar,
         country: user.country,
-        currency: user.currency
+        currency: user.currency,
+        onboardingCompleted: user.onboardingCompleted,
+        approvalStatus: user.approvalStatus,
+        profile: user.profile,
+        instructorProfile: user.instructorProfile,
+        createdAt: user.createdAt
       };
 
       console.log('[AUTH DEBUG] Registration successful for user:', this.currentUser.id);

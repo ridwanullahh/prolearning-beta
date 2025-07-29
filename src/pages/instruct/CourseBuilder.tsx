@@ -61,11 +61,14 @@ const CourseBuilder = () => {
 		price: 0,
 		academicLevelId: '',
 		subjectId: '',
+		level: '',
+		grade: '',
 		isPublished: false,
 	});
 	const [lessons, setLessons] = useState<Lesson[]>([]);
 	const [academicLevels, setAcademicLevels] = useState<any[]>([]);
 	const [subjects, setSubjects] = useState<any[]>([]);
+	const [instructorMaxLevel, setInstructorMaxLevel] = useState(0);
 	const { toast } = useToast();
 	const user = authService.getCurrentUser();
 
@@ -77,12 +80,22 @@ const CourseBuilder = () => {
 	}, [id]);
 
 	const loadFormData = async () => {
+		if (!user) return;
 		try {
-			const [levelsData, subjectsData] = await Promise.all([
+			const [levelsData, subjectsData, instructorQualsData] = await Promise.all([
 				db.get('academicLevels'),
 				db.get('subjects'),
+				db.queryBuilder('instructorQualifications').where((q: any) => q.instructorId === user.id && q.status === 'approved').exec(),
 			]);
-			setAcademicLevels(levelsData);
+			
+			const allQualifications = await db.get('qualifications');
+			const maxLevel = instructorQualsData.reduce((max: number, iq: any) => {
+				const qual = allQualifications.find((q: any) => q.id === iq.qualificationId);
+				return qual ? Math.max(max, qual.level) : max;
+			}, 0);
+
+			setInstructorMaxLevel(maxLevel);
+			setAcademicLevels(levelsData.filter((l: any) => l.order <= maxLevel));
 			setSubjects(subjectsData);
 		} catch (error) {
 			console.error('Error loading form data:', error);
@@ -288,42 +301,71 @@ const DetailsStep = ({ course, setCourse, academicLevels, subjects }: { course: 
             <CardDescription>Provide more context for your students.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-            <div className="space-y-2">
-                <Label>Difficulty</Label>
-                <Select value={course.difficulty} onValueChange={(v) => setCourse((p: any) => ({...p, difficulty: v}))}>
-                    <SelectTrigger><SelectValue/></SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="beginner">Beginner</SelectItem>
-                        <SelectItem value="intermediate">Intermediate</SelectItem>
-                        <SelectItem value="advanced">Advanced</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-            <div className="space-y-2">
-                <Label>Academic Level</Label>
-                <Select value={course.academicLevelId} onValueChange={(v) => setCourse((p: any) => ({...p, academicLevelId: v}))}>
-                    <SelectTrigger><SelectValue/></SelectTrigger>
-                    <SelectContent>
-                        {academicLevels.map(level => <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>)}
-                    </SelectContent>
-                </Select>
-            </div>
-            <div className="space-y-2">
-                <Label>Subject</Label>
-                <Select value={course.subjectId} onValueChange={(v) => setCourse((p: any) => ({...p, subjectId: v}))}>
-                    <SelectTrigger><SelectValue/></SelectTrigger>
-                    <SelectContent>
-                        {subjects.map(subject => <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>)}
-                    </SelectContent>
-                </Select>
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="prerequisites">Prerequisites</Label>
-                <Textarea id="prerequisites" value={course.prerequisites} onChange={(e) => setCourse((p: any) => ({...p, prerequisites: e.target.value}))} placeholder="List any required skills or courses." rows={4}/>
-            </div>
+        	<div className="space-y-2">
+        		<Label>Difficulty</Label>
+        		<Select value={course.difficulty} onValueChange={(v) => setCourse((p: any) => ({...p, difficulty: v}))}>
+        			<SelectTrigger><SelectValue/></SelectTrigger>
+        			<SelectContent>
+        				<SelectItem value="beginner">Beginner</SelectItem>
+        				<SelectItem value="intermediate">Intermediate</SelectItem>
+        				<SelectItem value="advanced">Advanced</SelectItem>
+        			</SelectContent>
+        		</Select>
+        	</div>
+        	<div className="space-y-2">
+        		<Label>Academic Level</Label>
+        		<Select value={course.academicLevelId} onValueChange={(v) => setCourse((p: any) => ({...p, academicLevelId: v, grade: ''}))}>
+        			<SelectTrigger><SelectValue/></SelectTrigger>
+        			<SelectContent>
+        				{academicLevels.map(level => <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>)}
+        			</SelectContent>
+        		</Select>
+        	</div>
+        	<div className="space-y-2">
+        		<Label>Grade</Label>
+        		<Select value={course.grade} onValueChange={(v) => setCourse((p: any) => ({...p, grade: v}))}>
+        			<SelectTrigger><SelectValue/></SelectTrigger>
+        			<SelectContent>
+        				{getGradesForLevel(course.academicLevelId, academicLevels).map(grade => <SelectItem key={grade} value={grade}>{grade}</SelectItem>)}
+        			</SelectContent>
+        		</Select>
+        	</div>
+        	<div className="space-y-2">
+        		<Label>Subject</Label>
+        		<Select value={course.subjectId} onValueChange={(v) => setCourse((p: any) => ({...p, subjectId: v}))}>
+        			<SelectTrigger><SelectValue/></SelectTrigger>
+        			<SelectContent>
+        				{subjects.map(subject => <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>)}
+        			</SelectContent>
+        		</Select>
+        	</div>
+        	<div className="space-y-2">
+        		<Label htmlFor="prerequisites">Prerequisites</Label>
+        		<Textarea id="prerequisites" value={course.prerequisites} onChange={(e) => setCourse((p: any) => ({...p, prerequisites: e.target.value}))} placeholder="List any required skills or courses." rows={4}/>
+        	</div>
         </CardContent>
-    </Card>
-);
+       </Card>
+      );
+      
+      const getGradesForLevel = (levelId: string, levels: any[]) => {
+        const level = levels.find(l => l.id === levelId);
+        if (!level) return [];
+      
+        switch (level.name) {
+          case 'Elementary School':
+            return ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5'];
+          case 'Middle School':
+            return ['Grade 6', 'Grade 7', 'Grade 8'];
+          case 'High School':
+            return ['Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+          case 'University':
+            return ['100 Level', '200 Level', '300 Level', '400 Level', '500 Level'];
+          case 'Graduate':
+            return ['Masters', 'PhD'];
+          default:
+            return [];
+        }
+      };
 
 const PricingStep = ({ course, setCourse }: { course: any, setCourse: any }) => (
     <Card>

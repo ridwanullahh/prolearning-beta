@@ -8,6 +8,9 @@ export const schema = {
     googleId: 'string',
     resetPasswordToken: 'string',
     resetPasswordExpires: 'string',
+    onboardingCompleted: 'boolean',
+    approvalStatus: 'string', // 'pending', 'approved', 'rejected'
+    instructorProfile: 'object',
     createdAt: 'string',
     updatedAt: 'string',
   },
@@ -18,6 +21,8 @@ export const schema = {
     price: 'number',
     tags: 'array',
     isPublished: 'boolean',
+    level: 'string',
+    grade: 'string',
     createdAt: 'string',
     updatedAt: 'string',
   },
@@ -187,5 +192,23 @@ export const schema = {
   subjects: {
     name: 'string',
     description: 'string',
+  },
+  qualifications: {
+    name: 'string',
+    level: 'number',
+    description: 'string',
+    country: 'string',
+  },
+  instructorQualifications: {
+    instructorId: 'string',
+    qualificationId: 'string',
+    status: 'string', // 'approved', 'pending'
+    documentUrl: 'string',
+  },
+  pendingQualifications: {
+    instructorId: 'string',
+    qualificationId: 'string',
+        documentUrl: 'string',
+    status: 'string', // 'pending', 'approved', 'rejected'
   },
 };

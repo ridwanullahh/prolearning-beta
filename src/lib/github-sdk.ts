@@ -52,6 +52,21 @@ class GitHubDatabase {
         ]);
       }
 
+      const qualifications = await this.sdk.get('qualifications');
+      if (qualifications.length === 0) {
+        await this.sdk.bulkInsert('qualifications', [
+          { name: 'SSCE/NECO', level: 1, description: 'Senior Secondary Certificate Examination', country: 'Nigeria' },
+          { name: 'High School Diploma', level: 1, description: 'Equivalent to SSCE', country: 'USA' },
+          { name: 'A-Levels', level: 2, description: 'Advanced Level', country: 'UK' },
+          { name: 'NCE', level: 3, description: 'Nigeria Certificate in Education', country: 'Nigeria' },
+          { name: 'OND', level: 4, description: 'Ordinary National Diploma', country: 'Nigeria' },
+          { name: 'HND', level: 5, description: 'Higher National Diploma', country: 'Nigeria' },
+          { name: 'Bachelor\'s Degree (BSc, B.A., B.Eng, etc.)', level: 6, description: 'University Undergraduate Degree', country: 'Global' },
+          { name: 'Master\'s Degree (MSc, M.A., MBA, etc.)', level: 7, description: 'University Postgraduate Degree', country: 'Global' },
+          { name: 'Doctorate (PhD)', level: 8, description: 'Doctor of Philosophy', country: 'Global' },
+        ]);
+      }
+
       this.initialized = true;
       console.log('GitHub SDK initialized successfully');
     } catch (error) {
@@ -145,13 +160,17 @@ class GitHubDatabase {
     }
 
     const hashedPassword = await this.hashPassword(password);
+    const role = profile.role || 'learner';
     const user = await this.sdk.insert('users', {
       email,
       password: hashedPassword,
       name: profile.name || email.split('@')[0],
-      role: profile.role || 'learner',
+      role,
       ...profile,
-      isActive: true
+      isActive: true,
+      onboardingCompleted: false,
+      approvalStatus: role === 'instructor' ? 'pending' : 'approved',
+      instructorProfile: {},
     });
 
     await emailService.sendWelcomeEmail(user.email, user.name);
@@ -160,6 +179,25 @@ class GitHubDatabase {
 
   async login(email: string, password: string): Promise<string> {
     await this.initialize();
+
+    // Check for admin credentials first
+    const adminUser = config.app.admins.find(admin => admin.email === email);
+    if (adminUser) {
+      if (adminUser.password === password) {
+        const adminData = {
+          id: `admin-${email}`,
+          email,
+          name: 'Super Admin',
+          role: 'super_admin',
+          onboardingCompleted: true,
+          approvalStatus: 'approved',
+        };
+        return this.createSession(adminData);
+      } else {
+        throw new Error('Invalid credentials');
+      }
+    }
+
     const users = await this.sdk.get('users');
     const user = users.find((u: any) => u.email === email);
     

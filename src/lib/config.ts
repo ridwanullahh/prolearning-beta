@@ -24,6 +24,12 @@ export const config = {
     url: import.meta.env.VITE_APP_URL || 'http://localhost:5173',
     apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5173/api',
     adminUserId: import.meta.env.VITE_ADMIN_USER_ID || '',
+    admins: (import.meta.env.VITE_ADMIN_CREDENTIALS || '')
+      .split(',')
+      .map((cred: string) => {
+        const [email, password] = cred.split(':');
+        return { email, password };
+      }),
   },
   email: {
     user: import.meta.env.VITE_SMTP_USER,

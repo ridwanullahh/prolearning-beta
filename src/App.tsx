@@ -39,6 +39,12 @@ import TermsPage from "./pages/TermsPage";
 import AboutPage from "./pages/AboutPage";
 import FeaturesPage from "./pages/FeaturesPage";
 import BecomeInstructorPage from "./pages/BecomeInstructorPage";
+import InstructorOnboardingPage from "./pages/instructor/OnboardingPage";
+import LearnerOnboardingPage from "./pages/learner/OnboardingPage";
+import InstructorApprovalsPage from "./pages/super-admin/InstructorApprovalsPage";
+import LearnerSettingsPage from "./pages/dashboard/SettingsPage";
+import InstructorSettingsPage from "./pages/instruct/SettingsPage";
+import QualificationApprovalsPage from "./pages/super-admin/QualificationApprovalsPage";
 
 
 const queryClient = new QueryClient();
@@ -103,6 +109,8 @@ const App = () => {
                 <Route index element={<LearnerDashboardHome />} />
                 <Route path="courses" element={<MyCourses />} />
                 <Route path="course/:courseId/view" element={<CourseViewer />} />
+                <Route path="onboarding" element={<LearnerOnboardingPage />} />
+                <Route path="settings" element={<LearnerSettingsPage />} />
               </Route>
               
               <Route path="/instruct" element={
@@ -115,6 +123,8 @@ const App = () => {
                 <Route path="course/new" element={<CourseBuilder />} />
                 <Route path="course/:courseId/edit" element={<CourseBuilder />} />
                 <Route path="course/:courseId/lesson/:lessonId/edit" element={<LessonEditor />} />
+                <Route path="onboarding" element={<InstructorOnboardingPage />} />
+                <Route path="settings" element={<InstructorSettingsPage />} />
               </Route>
 
               <Route path="/super-admin" element={
@@ -123,6 +133,8 @@ const App = () => {
                 </ProtectedRoute>
               }>
                 <Route index element={<SuperAdminDashboardHome />} />
+                <Route path="instructor-approvals" element={<InstructorApprovalsPage />} />
+                <Route path="qualification-approvals" element={<QualificationApprovalsPage />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />
