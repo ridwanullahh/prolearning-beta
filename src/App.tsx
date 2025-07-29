@@ -38,6 +38,7 @@ import ContactPage from "./pages/ContactPage";
 import TermsPage from "./pages/TermsPage";
 import AboutPage from "./pages/AboutPage";
 import FeaturesPage from "./pages/FeaturesPage";
+import BecomeInstructorPage from "./pages/BecomeInstructorPage";
 
 
 const queryClient = new QueryClient();
@@ -84,6 +85,7 @@ const App = () => {
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/features" element={<FeaturesPage />} />
+              <Route path="/become-instructor" element={<BecomeInstructorPage />} />
               <Route path="/blog" element={<BlogArchive />} />
               <Route path="/blog/:slug" element={<BlogPost />} />
               <Route path="/help" element={<HelpCenter />} />

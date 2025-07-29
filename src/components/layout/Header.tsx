@@ -27,6 +27,7 @@ const Header: React.FC = () => {
           <NavLink href="/features">Features</NavLink>
           <NavLink href="/blog">Blog</NavLink>
           <NavLink href="/contact">Contact</NavLink>
+          <NavLink href="/become-instructor">Become an Instructor</NavLink>
         </nav>
         <div className="hidden items-center gap-2 md:flex">
           <ThemeToggle />
@@ -62,6 +63,7 @@ const Header: React.FC = () => {
             <NavLink href="/features">Features</NavLink>
             <NavLink href="/blog">Blog</NavLink>
             <NavLink href="/contact">Contact</NavLink>
+            <NavLink href="/become-instructor">Become an Instructor</NavLink>
             <div className="flex w-full flex-col space-y-2">
               <ThemeToggle />
               <Button variant="outline" asChild>
