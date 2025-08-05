@@ -45,6 +45,14 @@ import InstructorApprovalsPage from "./pages/super-admin/InstructorApprovalsPage
 import LearnerSettingsPage from "./pages/dashboard/SettingsPage";
 import InstructorSettingsPage from "./pages/instruct/SettingsPage";
 import QualificationApprovalsPage from "./pages/super-admin/QualificationApprovalsPage";
+import CreateCourseTrackPage from "./pages/instruct/CreateCourseTrackPage";
+import ManageCourseTracksPage from "./pages/instruct/ManageCourseTracksPage";
+import EditCourseTrackPage from "./pages/instruct/EditCourseTrackPage";
+import CourseTrackDetailsPage from "./pages/course/CourseTrackDetailsPage";
+import MyCourseTracksPage from "./pages/dashboard/MyCourseTracksPage";
+import FloatingToolbar from "./components/global/FloatingToolbar";
+import LearnerNotesPage from "./pages/dashboard/LearnerNotesPage";
+import InstructorNotesPage from "./pages/instruct/InstructorNotesPage";
 
 
 const queryClient = new QueryClient();
@@ -99,6 +107,7 @@ const App = () => {
               <Route path="/support" element={<SupportTicket />} />
               <Route path="/marketplace" element={<MarketplacePage />} />
               <Route path="/course/:courseId" element={<CourseDetailsPage />} />
+              <Route path="/track/:trackId" element={<CourseTrackDetailsPage />} />
               <Route path="/checkout" element={<Checkout />} />
               
               <Route path="/dashboard" element={
@@ -111,6 +120,8 @@ const App = () => {
                 <Route path="course/:courseId/view" element={<CourseViewer />} />
                 <Route path="onboarding" element={<LearnerOnboardingPage />} />
                 <Route path="settings" element={<LearnerSettingsPage />} />
+                <Route path="my-tracks" element={<MyCourseTracksPage />} />
+                <Route path="notes" element={<LearnerNotesPage />} />
               </Route>
               
               <Route path="/instruct" element={
@@ -125,6 +136,10 @@ const App = () => {
                 <Route path="course/:courseId/lesson/:lessonId/edit" element={<LessonEditor />} />
                 <Route path="onboarding" element={<InstructorOnboardingPage />} />
                 <Route path="settings" element={<InstructorSettingsPage />} />
+                <Route path="track/new" element={<CreateCourseTrackPage />} />
+                <Route path="tracks" element={<ManageCourseTracksPage />} />
+                <Route path="track/:trackId/edit" element={<EditCourseTrackPage />} />
+                <Route path="notes" element={<InstructorNotesPage />} />
               </Route>
 
               <Route path="/super-admin" element={
@@ -139,6 +154,7 @@ const App = () => {
 
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <FloatingToolbar />
           </BrowserRouter>
         </TooltipProvider>
       </QueryClientProvider>

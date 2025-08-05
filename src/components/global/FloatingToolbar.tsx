@@ -1,0 +1,250 @@
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import {
+  MessageSquare,
+  Bot,
+  Notebook,
+  MessageCircle,
+  ChevronUp,
+  ChevronDown,
+  Users,
+  Sparkles,
+  FileText,
+  Send
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import ForumModal from '../forum/ForumModal';
+import AIChatModal from '../ai-chat/AIChatModal';
+import NotesModal from '../notes/NotesModal';
+import MessagingModal from '../messaging/MessagingModal';
+
+import { authService } from '@/lib/auth';
+import { db } from '@/lib/github-sdk';
+
+interface ToolbarItem {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  component: React.ReactNode;
+  isVisible: boolean;
+  badge?: number;
+}
+
+const FloatingToolbar: React.FC = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [courseId, setCourseId] = useState<string | null>(null);
+  const [lessonId, setLessonId] = useState<string | null>(null);
+  const [isAllowed, setIsAllowed] = useState(false);
+  const [unreadCounts, setUnreadCounts] = useState({
+    messages: 0,
+    forum: 0,
+    ai: 0
+  });
+  const location = useLocation();
+  const currentUser = authService.getCurrentUser();
+
+  useEffect(() => {
+    const checkPermissions = async () => {
+      const courseRegex = /course\/([^/]+)/;
+      const courseMatch = location.pathname.match(courseRegex);
+      const currentCourseId = courseMatch ? courseMatch[1] : null;
+      setCourseId(currentCourseId);
+
+      const lessonRegex = /lesson\/([^/]+)/;
+      const lessonMatch = location.pathname.match(lessonRegex);
+      setLessonId(lessonMatch ? lessonMatch[1] : null);
+
+      if (!currentUser) {
+        setIsAllowed(false);
+        return;
+      }
+
+      // Allow access on dashboard pages
+      if (location.pathname.includes('/dashboard') || location.pathname.includes('/instruct')) {
+        setIsAllowed(true);
+        return;
+      }
+
+      if (!currentCourseId) {
+        setIsAllowed(false);
+        return;
+      }
+
+      const course = await db.getItem('courses', currentCourseId);
+      if (course?.instructorId === currentUser.id) {
+        setIsAllowed(true);
+        return;
+      }
+
+      const enrollments = await db.queryBuilder('enrollments')
+        .where((e: any) => e.userId === currentUser.id && e.courseId === currentCourseId)
+        .exec();
+      setIsAllowed(enrollments.length > 0);
+    }
+
+    const fetchUnreadCounts = async () => {
+      if (!currentUser) return;
+
+      try {
+        // Get unread messages count
+        const conversations = await db.queryBuilder('conversations')
+          .where((c: any) => c.participantIds.includes(currentUser.id))
+          .exec();
+
+        let unreadMessages = 0;
+        for (const conv of conversations) {
+          const messages = await db.queryBuilder('messages')
+            .where((m: any) => m.conversationId === conv.id && m.senderId !== currentUser.id && !m.isRead)
+            .exec();
+          unreadMessages += messages.length;
+        }
+
+        setUnreadCounts(prev => ({ ...prev, messages: unreadMessages }));
+      } catch (error) {
+        console.error('Error fetching unread counts:', error);
+      }
+    };
+
+    checkPermissions();
+    fetchUnreadCounts();
+
+    // Set up interval to refresh unread counts
+    const interval = setInterval(fetchUnreadCounts, 30000); // Every 30 seconds
+    return () => clearInterval(interval);
+  }, [location, currentUser]);
+
+  const toggleToolbar = () => {
+    setIsOpen(!isOpen);
+  };
+
+  const toolbarItems: ToolbarItem[] = [
+    {
+      id: 'forum',
+      label: 'Forum',
+      icon: <Users className="h-5 w-5" />,
+      component: (
+        <ForumModal courseId={courseId || ''} lessonId={lessonId || undefined}>
+          <div className="flex flex-col items-center gap-1 cursor-pointer">
+            <div className="relative">
+              <Users className="h-5 w-5" />
+              {unreadCounts.forum > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                  {unreadCounts.forum > 9 ? '9+' : unreadCounts.forum}
+                </span>
+              )}
+            </div>
+            <span className="text-xs">Forum</span>
+          </div>
+        </ForumModal>
+      ),
+      isVisible: isAllowed && !!courseId
+    },
+    {
+      id: 'ai-chat',
+      label: 'AI Support',
+      icon: <Sparkles className="h-5 w-5" />,
+      component: (
+        <AIChatModal>
+          <div className="flex flex-col items-center gap-1 cursor-pointer">
+            <div className="relative">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <span className="text-xs">AI Support</span>
+          </div>
+        </AIChatModal>
+      ),
+      isVisible: true
+    },
+    {
+      id: 'notes',
+      label: 'Notes',
+      icon: <FileText className="h-5 w-5" />,
+      component: (
+        <NotesModal>
+          <div className="flex flex-col items-center gap-1 cursor-pointer">
+            <div className="relative">
+              <FileText className="h-5 w-5" />
+            </div>
+            <span className="text-xs">Notes</span>
+          </div>
+        </NotesModal>
+      ),
+      isVisible: true
+    },
+    {
+      id: 'messaging',
+      label: 'Messages',
+      icon: <Send className="h-5 w-5" />,
+      component: (
+        <MessagingModal>
+          <div className="flex flex-col items-center gap-1 cursor-pointer">
+            <div className="relative">
+              <Send className="h-5 w-5" />
+              {unreadCounts.messages > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                  {unreadCounts.messages > 9 ? '9+' : unreadCounts.messages}
+                </span>
+              )}
+            </div>
+            <span className="text-xs">Messages</span>
+          </div>
+        </MessagingModal>
+      ),
+      isVisible: isAllowed
+    }
+  ];
+
+  const visibleItems = toolbarItems.filter(item => item.isVisible);
+
+  if (!currentUser || visibleItems.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
+      <div className="flex justify-center pb-6">
+        <div className="pointer-events-auto">
+          <AnimatePresence>
+            {isOpen && (
+              <motion.div
+                initial={{ y: 100, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 100, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="mb-4"
+              >
+                <div className="bg-background/95 backdrop-blur-lg border border-border/50 rounded-2xl shadow-2xl p-4">
+                  <div className="flex items-center gap-6">
+                    {visibleItems.map((item) => (
+                      <div key={item.id} className="flex flex-col items-center">
+                        {item.component}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="flex justify-center">
+            <Button
+              onClick={toggleToolbar}
+              size="lg"
+              className="rounded-full shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground h-14 w-14"
+            >
+              <motion.div
+                animate={{ rotate: isOpen ? 180 : 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                {isOpen ? <ChevronDown className="h-6 w-6" /> : <ChevronUp className="h-6 w-6" />}
+              </motion.div>
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default FloatingToolbar;

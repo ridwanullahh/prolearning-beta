@@ -1,6 +1,7 @@
 
 import { AppHeader, AppSidebar } from '@/components/layout/Sidebar';
 import { SidebarProvider } from '@/components/ui/sidebar';
+import FloatingToolbar from '@/components/global/FloatingToolbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -116,6 +117,7 @@ const InstructorDashboard = () => {
 						<Outlet />
 					</main>
 				</div>
+				<FloatingToolbar />
 			</div>
 		</SidebarProvider>
 	);

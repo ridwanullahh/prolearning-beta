@@ -29,10 +29,14 @@ import { db } from '../../lib/github-sdk';
 import { authService } from '../../lib/auth';
 import { useToast } from '../../hooks/use-toast';
 import { Course, Subject, AcademicLevel } from '../../lib/types';
+import CourseTrackCard from '../../components/course/CourseTrackCard';
 
 const MarketplacePage = () => {
   const [courses, setCourses] = useState<Course[]>([]);
+  const [courseTracks, setCourseTracks] = useState<any[]>([]);
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
+  const [filteredCourseTracks, setFilteredCourseTracks] = useState<any[]>([]);
+  const [viewType, setViewType] = useState<'courses' | 'tracks'>('courses');
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -61,16 +65,19 @@ const MarketplacePage = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [allCourses, levels, allSubjects] = await Promise.all([
+      const [allCourses, allTracks, levels, allSubjects] = await Promise.all([
         db.get('courses'),
+        db.get('courseTracks'),
         db.get('academicLevels'),
         db.get('subjects')
       ]);
       
       const publishedCourses = allCourses.filter(course => course.isPublished);
+      const publishedTracks = allTracks.filter(track => track.isPublished);
       const uniqueCategories = [...new Set(allSubjects.map(s => s.category).filter(Boolean))];
 
       setCourses(publishedCourses);
+      setCourseTracks(publishedTracks);
       setAcademicLevels(levels);
       setSubjects(allSubjects);
       setCategories(uniqueCategories);
@@ -87,55 +94,101 @@ const MarketplacePage = () => {
   };
 
   const filterCourses = () => {
-    let filtered = [...courses];
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(course =>
-        course.title.toLowerCase().includes(query) ||
-        course.description.toLowerCase().includes(query) ||
-        course.tags?.some(tag => tag.toLowerCase().includes(query))
-      );
-    }
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(course => {
-        const subject = subjects.find(s => s.id === course.subjectId);
-        return subject?.category === selectedCategory;
-      });
-    }
-    if (selectedLevel !== 'all') {
-      filtered = filtered.filter(course => course.academicLevelId === selectedLevel);
-    }
-    if (priceFilter !== 'all') {
-      switch (priceFilter) {
-        case 'free':
-          filtered = filtered.filter(course => !course.price || course.price === 0);
+    if (viewType === 'courses') {
+      let filtered = [...courses];
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        filtered = filtered.filter(course =>
+          course.title.toLowerCase().includes(query) ||
+          course.description.toLowerCase().includes(query) ||
+          course.tags?.some(tag => tag.toLowerCase().includes(query))
+        );
+      }
+      if (selectedCategory !== 'all') {
+        filtered = filtered.filter(course => {
+          const subject = subjects.find(s => s.id === course.subjectId);
+          return subject?.category === selectedCategory;
+        });
+      }
+      if (selectedLevel !== 'all') {
+        filtered = filtered.filter(course => course.academicLevelId === selectedLevel);
+      }
+      if (priceFilter !== 'all') {
+        switch (priceFilter) {
+          case 'free':
+            filtered = filtered.filter(course => !course.price || course.price === 0);
+            break;
+          case 'paid':
+            filtered = filtered.filter(course => course.price && course.price > 0);
+            break;
+          case 'under_25':
+            filtered = filtered.filter(course => course.price && course.price < 25);
+            break;
+          case '25_100':
+            filtered = filtered.filter(course => course.price && course.price >= 25 && course.price <= 100);
+            break;
+          case 'over_100':
+            filtered = filtered.filter(course => course.price && course.price > 100);
+            break;
+        }
+      }
+      switch (sortBy) {
+        case 'popular':
+          filtered.sort((a, b) => (b.enrollmentCount || 0) - (a.enrollmentCount || 0));
           break;
-        case 'paid':
-          filtered = filtered.filter(course => course.price && course.price > 0);
+        case 'rating':
+          filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
           break;
-        case 'under_25':
-          filtered = filtered.filter(course => course.price && course.price < 25);
-          break;
-        case '25_100':
-          filtered = filtered.filter(course => course.price && course.price >= 25 && course.price <= 100);
-          break;
-        case 'over_100':
-          filtered = filtered.filter(course => course.price && course.price > 100);
+        case 'newest':
+          filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
           break;
       }
+      setFilteredCourses(filtered);
+    } else {
+      let filtered = [...courseTracks];
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        filtered = filtered.filter(track =>
+          track.title.toLowerCase().includes(query) ||
+          track.description.toLowerCase().includes(query) ||
+          track.tags?.some((tag: string) => tag.toLowerCase().includes(query))
+        );
+      }
+      if (selectedLevel !== 'all') {
+        filtered = filtered.filter(track => track.level === selectedLevel);
+      }
+      if (priceFilter !== 'all') {
+        switch (priceFilter) {
+          case 'free':
+            filtered = filtered.filter(track => !track.price || track.price === 0);
+            break;
+          case 'paid':
+            filtered = filtered.filter(track => track.price && track.price > 0);
+            break;
+          case 'under_25':
+            filtered = filtered.filter(track => track.price && track.price < 25);
+            break;
+          case '25_100':
+            filtered = filtered.filter(track => track.price && track.price >= 25 && track.price <= 100);
+            break;
+          case 'over_100':
+            filtered = filtered.filter(track => track.price && track.price > 100);
+            break;
+        }
+      }
+      switch (sortBy) {
+        case 'popular':
+          filtered.sort((a, b) => (b.enrollmentCount || 0) - (a.enrollmentCount || 0));
+          break;
+        case 'rating':
+          filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+          break;
+        case 'newest':
+          filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          break;
+      }
+      setFilteredCourseTracks(filtered);
     }
-    switch (sortBy) {
-      case 'popular':
-        filtered.sort((a, b) => (b.enrollmentCount || 0) - (a.enrollmentCount || 0));
-        break;
-      case 'rating':
-        filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-        break;
-      case 'newest':
-        filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        break;
-    }
-    setFilteredCourses(filtered);
   };
 
   const formatPrice = (price: number) => {
@@ -270,8 +323,12 @@ const MarketplacePage = () => {
                 <SlidersHorizontal className="h-4 w-4 mr-2" />
                 Filters
               </Button>
+              <div className="flex items-center gap-4">
+                <Button variant={viewType === 'courses' ? 'secondary' : 'ghost'} onClick={() => setViewType('courses')}>Courses</Button>
+                <Button variant={viewType === 'tracks' ? 'secondary' : 'ghost'} onClick={() => setViewType('tracks')}>Course Tracks</Button>
+              </div>
               <p className="text-gray-600 dark:text-gray-400 hidden lg:block">
-                {filteredCourses.length} amazing course{filteredCourses.length !== 1 ? 's' : ''} found
+                {viewType === 'courses' ? filteredCourses.length : filteredCourseTracks.length} amazing {viewType === 'courses' ? 'course' : 'track'}{filteredCourses.length !== 1 ? 's' : ''} found
               </p>
               <div className="flex items-center gap-2">
                 <Select value={sortBy} onValueChange={setSortBy}>
@@ -299,7 +356,7 @@ const MarketplacePage = () => {
                   : 'space-y-4'
               }
             >
-              {filteredCourses.map(course => (
+              {viewType === 'courses' && filteredCourses.map(course => (
                 <motion.div variants={itemVariants} key={course.id}>
                   {viewMode === 'grid'
                     ? <CourseCard course={course} getLevelName={getLevelName} getSubjectCategory={getSubjectCategory} formatPrice={formatPrice} />
@@ -307,6 +364,11 @@ const MarketplacePage = () => {
                   }
                 </motion.div>
               ))}
+              {viewType === 'tracks' && filteredCourseTracks.map(track => (
+                 <motion.div variants={itemVariants} key={track.id}>
+                   <CourseTrackCard track={track} />
+                 </motion.div>
+               ))}
             </motion.div>
 
             {filteredCourses.length === 0 && (

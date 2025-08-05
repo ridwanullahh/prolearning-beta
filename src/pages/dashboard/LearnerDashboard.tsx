@@ -23,6 +23,7 @@ import { db } from '@/lib/github-sdk';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, Outlet } from 'react-router-dom';
 import CourseGenerationWizard from '@/components/course/CourseGenerationWizard';
+import FloatingToolbar from '@/components/global/FloatingToolbar';
 import { motion } from 'framer-motion';
 
 const LearnerDashboard = () => {
@@ -156,6 +157,7 @@ const LearnerDashboard = () => {
             </div>
           </main>
         </div>
+        <FloatingToolbar />
       </div>
     </SidebarProvider>
   );

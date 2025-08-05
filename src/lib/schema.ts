@@ -211,4 +211,202 @@ export const schema = {
         documentUrl: 'string',
     status: 'string', // 'pending', 'approved', 'rejected'
   },
+  courseTracks: {
+    title: 'string',
+    description: 'string',
+    instructorId: 'string',
+    price: 'number',
+    tags: 'array',
+    isPublished: 'boolean',
+    level: 'string',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  courseTrackCourses: {
+    courseTrackId: 'string',
+    courseId: 'string',
+    order: 'number',
+    prerequisiteCourseId: 'string', // Optional: ID of the course that must be completed before this one
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  courseTrackEnrollments: {
+    userId: 'string',
+    courseTrackId: 'string',
+    progress: 'number', // Percentage of the track completed
+    completed: 'boolean',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  forums: {
+    courseId: 'string', // Each course has one forum
+    title: 'string',
+    description: 'string',
+    isActive: 'boolean',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  forumThreads: {
+    forumId: 'string',
+    courseId: 'string', // Direct reference for easier querying
+    lessonId: 'string', // Optional: for lesson-specific threads
+    userId: 'string', // User who created the thread
+    title: 'string',
+    content: 'string', // Initial post content
+    type: 'string', // 'general', 'lesson', 'question', 'discussion'
+    isPinned: 'boolean',
+    isLocked: 'boolean',
+    isAnswered: 'boolean', // For question threads
+    tags: 'array',
+    viewCount: 'number',
+    lastActivityAt: 'string',
+    lastActivityUserId: 'string',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  forumPosts: {
+    threadId: 'string',
+    userId: 'string',
+    content: 'string',
+    isAnswer: 'boolean',
+    isEdited: 'boolean',
+    editedAt: 'string',
+    parentPostId: 'string', // For nested replies
+    likes: 'number',
+    dislikes: 'number',
+    attachments: 'array',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  forumPostReactions: {
+    postId: 'string',
+    userId: 'string',
+    type: 'string', // 'like', 'dislike', 'helpful', 'insightful'
+    createdAt: 'string',
+  },
+  geminiApiKeys: {
+    key: 'string',
+    name: 'string', // Friendly name for the key
+    usageCount: 'number',
+    dailyUsageCount: 'number',
+    lastUsedAt: 'string',
+    lastResetAt: 'string', // For daily usage reset
+    isActive: 'boolean',
+    rateLimit: 'number', // requests per minute
+    dailyLimit: 'number', // requests per day
+    priority: 'number', // For key selection priority
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  aiChatSessions: {
+    userId: 'string',
+    title: 'string',
+    context: 'object', // e.g., { courseId, lessonId, type: 'lesson'|'course'|'general' }
+    isActive: 'boolean',
+    lastMessageAt: 'string',
+    messageCount: 'number',
+    tags: 'array',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  aiChatMessages: {
+    sessionId: 'string',
+    role: 'string', // 'user' or 'assistant'
+    content: 'string',
+    tokens: 'number', // Token count for usage tracking
+    model: 'string', // Model used for this message
+    isContextual: 'boolean', // Whether message used contextual data
+    metadata: 'object', // Additional metadata like response time, etc.
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  noteFolders: {
+    userId: 'string',
+    name: 'string',
+    description: 'string',
+    color: 'string', // Hex color for folder
+    parentFolderId: 'string', // For nested folders
+    isShared: 'boolean',
+    shareSettings: 'object',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  noteCategories: {
+    userId: 'string',
+    name: 'string',
+    description: 'string',
+    color: 'string', // Hex color for category
+    icon: 'string', // Icon name
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  notes: {
+    userId: 'string',
+    folderId: 'string',
+    categoryId: 'string',
+    title: 'string',
+    content: 'string', // Rich text/markdown
+    plainTextContent: 'string', // For search purposes
+    isArchived: 'boolean',
+    isFavorite: 'boolean',
+    isPinned: 'boolean',
+    tags: 'array',
+    lessonId: 'string', // for contextual notes
+    courseId: 'string', // for contextual notes
+    attachments: 'array',
+    wordCount: 'number',
+    readingTime: 'number', // Estimated reading time in minutes
+    lastViewedAt: 'string',
+    version: 'number', // For version control
+    isAiEnhanced: 'boolean', // Whether AI has enhanced this note
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  noteVersions: {
+    noteId: 'string',
+    version: 'number',
+    content: 'string',
+    changeDescription: 'string',
+    createdAt: 'string',
+  },
+  conversations: {
+    participantIds: 'array', // [userId1, userId2]
+    type: 'string', // 'direct', 'group'
+    title: 'string', // Optional title for group conversations
+    lastMessageId: 'string',
+    lastMessageAt: 'string',
+    isActive: 'boolean',
+    courseId: 'string', // Optional: for course-specific conversations
+    metadata: 'object', // Additional conversation metadata
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  messages: {
+    conversationId: 'string',
+    senderId: 'string',
+    content: 'string',
+    type: 'string', // 'text', 'file', 'image', 'system'
+    isRead: 'boolean',
+    isEdited: 'boolean',
+    editedAt: 'string',
+    replyToMessageId: 'string', // For threaded replies
+    attachments: 'array',
+    reactions: 'array', // Array of reaction objects
+    deliveredAt: 'string',
+    readAt: 'string',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  messageReactions: {
+    messageId: 'string',
+    userId: 'string',
+    emoji: 'string',
+    createdAt: 'string',
+  },
+  messageReadReceipts: {
+    messageId: 'string',
+    userId: 'string',
+    readAt: 'string',
+    createdAt: 'string',
+  },
 };
