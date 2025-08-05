@@ -14,12 +14,11 @@ import {
   Trash2,
   MoreVertical
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import formatDistanceToNow from '@/lib/date-utils';
 import { useLocation } from 'react-router-dom';
 import { db } from '@/lib/github-sdk';
 import { authService } from '@/lib/auth';
 import ChatView from './ChatView';
-import { Button } from '../ui/button';
 
 const SessionList: React.FC = () => {
   const [sessions, setSessions] = useState<any[]>([]);
@@ -161,6 +160,21 @@ const SessionList: React.FC = () => {
     return 'General';
   };
 
+  const safeFormatDistanceToNow = (dateString: string | undefined) => {
+    if (!dateString) return 'No date';
+    try {
+      const date = new Date(dateString);
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        return 'Invalid date';
+      }
+      return formatDistanceToNow(date, { addSuffix: true });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
+    }
+  };
+
   if (selectedSession) {
     return <ChatView session={selectedSession} onBack={() => setSelectedSession(null)} />;
   }
@@ -240,10 +254,7 @@ const SessionList: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {session.lastMessageAt
-                            ? formatDistanceToNow(new Date(session.lastMessageAt), { addSuffix: true })
-                            : formatDistanceToNow(new Date(session.createdAt), { addSuffix: true })
-                          }
+                          {safeFormatDistanceToNow(session.lastMessageAt || session.createdAt)}
                         </div>
                       </div>
                     </div>
