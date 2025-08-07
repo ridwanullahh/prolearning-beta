@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   MessageSquare,
   Bot,
@@ -124,19 +125,31 @@ const FloatingToolbar: React.FC = () => {
       label: 'Forum',
       icon: <Users className="h-5 w-5" />,
       component: (
-        <ForumModal courseId={courseId || ''} lessonId={lessonId || undefined}>
-          <div className="flex flex-col items-center gap-1 cursor-pointer">
-            <div className="relative">
-              <Users className="h-5 w-5" />
-              {unreadCounts.forum > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                  {unreadCounts.forum > 9 ? '9+' : unreadCounts.forum}
-                </span>
-              )}
+        <Sheet>
+          <SheetTrigger asChild>
+            <div className="flex flex-col items-center gap-1 cursor-pointer">
+              <div className="relative">
+                <Users className="h-5 w-5" />
+                {unreadCounts.forum > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                    {unreadCounts.forum > 9 ? '9+' : unreadCounts.forum}
+                  </span>
+                )}
+              </div>
+              <span className="text-xs">Forum</span>
             </div>
-            <span className="text-xs">Forum</span>
-          </div>
-        </ForumModal>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-96">
+            <SheetHeader>
+              <SheetTitle>Course Forum</SheetTitle>
+            </SheetHeader>
+            <div className="mt-6 h-full">
+              <ForumModal courseId={courseId || ''} lessonId={lessonId || undefined}>
+                <div className="w-full h-full">Forum Content</div>
+              </ForumModal>
+            </div>
+          </SheetContent>
+        </Sheet>
       ),
       isVisible: isAllowed && !!courseId
     },
@@ -145,14 +158,26 @@ const FloatingToolbar: React.FC = () => {
       label: 'AI Support',
       icon: <Sparkles className="h-5 w-5" />,
       component: (
-        <AIChatModal>
-          <div className="flex flex-col items-center gap-1 cursor-pointer">
-            <div className="relative">
-              <Sparkles className="h-5 w-5" />
+        <Sheet>
+          <SheetTrigger asChild>
+            <div className="flex flex-col items-center gap-1 cursor-pointer">
+              <div className="relative">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <span className="text-xs">AI Support</span>
             </div>
-            <span className="text-xs">AI Support</span>
-          </div>
-        </AIChatModal>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-96">
+            <SheetHeader>
+              <SheetTitle>AI Learning Assistant</SheetTitle>
+            </SheetHeader>
+            <div className="mt-6 h-full">
+              <AIChatModal>
+                <div className="w-full h-full">AI Chat Content</div>
+              </AIChatModal>
+            </div>
+          </SheetContent>
+        </Sheet>
       ),
       isVisible: true
     },
@@ -161,14 +186,26 @@ const FloatingToolbar: React.FC = () => {
       label: 'Notes',
       icon: <FileText className="h-5 w-5" />,
       component: (
-        <NotesModal>
-          <div className="flex flex-col items-center gap-1 cursor-pointer">
-            <div className="relative">
-              <FileText className="h-5 w-5" />
+        <Sheet>
+          <SheetTrigger asChild>
+            <div className="flex flex-col items-center gap-1 cursor-pointer">
+              <div className="relative">
+                <FileText className="h-5 w-5" />
+              </div>
+              <span className="text-xs">Notes</span>
             </div>
-            <span className="text-xs">Notes</span>
-          </div>
-        </NotesModal>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-96">
+            <SheetHeader>
+              <SheetTitle>My Notes</SheetTitle>
+            </SheetHeader>
+            <div className="mt-6 h-full">
+              <NotesModal>
+                <div className="w-full h-full">Notes Content</div>
+              </NotesModal>
+            </div>
+          </SheetContent>
+        </Sheet>
       ),
       isVisible: true
     },
@@ -177,21 +214,33 @@ const FloatingToolbar: React.FC = () => {
       label: 'Messages',
       icon: <Send className="h-5 w-5" />,
       component: (
-        <MessagingModal>
-          <div className="flex flex-col items-center gap-1 cursor-pointer">
-            <div className="relative">
-              <Send className="h-5 w-5" />
-              {unreadCounts.messages > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                  {unreadCounts.messages > 9 ? '9+' : unreadCounts.messages}
-                </span>
-              )}
+        <Sheet>
+          <SheetTrigger asChild>
+            <div className="flex flex-col items-center gap-1 cursor-pointer">
+              <div className="relative">
+                <Send className="h-5 w-5" />
+                {unreadCounts.messages > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                    {unreadCounts.messages > 9 ? '9+' : unreadCounts.messages}
+                  </span>
+                )}
+              </div>
+              <span className="text-xs">Messages</span>
             </div>
-            <span className="text-xs">Messages</span>
-          </div>
-        </MessagingModal>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-96">
+            <SheetHeader>
+              <SheetTitle>Messages</SheetTitle>
+            </SheetHeader>
+            <div className="mt-6 h-full">
+              <MessagingModal>
+                <div className="w-full h-full">Messages Content</div>
+              </MessagingModal>
+            </div>
+          </SheetContent>
+        </Sheet>
       ),
-      isVisible: isAllowed
+      isVisible: isAllowed && currentUser?.role === 'instructor' // Only instructors can access messaging for now
     }
   ];
 
@@ -203,19 +252,19 @@ const FloatingToolbar: React.FC = () => {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
-      <div className="flex justify-center pb-6">
+      <div className="flex justify-center pb-2">
         <div className="pointer-events-auto">
           <AnimatePresence>
             {isOpen && (
               <motion.div
-                initial={{ y: 100, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 100, opacity: 0 }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="mb-4"
+                initial={{ y: 100, opacity: 0, scale: 0.8 }}
+                animate={{ y: 0, opacity: 1, scale: 1 }}
+                exit={{ y: 100, opacity: 0, scale: 0.8 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                className="mb-2"
               >
-                <div className="bg-background/95 backdrop-blur-lg border border-border/50 rounded-2xl shadow-2xl p-4">
-                  <div className="flex items-center gap-6">
+                <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 rounded-3xl shadow-2xl shadow-black/10 dark:shadow-black/30 p-6">
+                  <div className="flex items-center gap-8">
                     {visibleItems.map((item) => (
                       <div key={item.id} className="flex flex-col items-center">
                         {item.component}
@@ -227,20 +276,29 @@ const FloatingToolbar: React.FC = () => {
             )}
           </AnimatePresence>
 
-          <div className="flex justify-center">
+          {/* Toggle Button - More attached to bottom */}
+          <motion.div
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            className="flex justify-center"
+          >
             <Button
               onClick={toggleToolbar}
               size="lg"
-              className="rounded-full shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground h-14 w-14"
+              className="rounded-full h-16 w-16 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-2xl shadow-green-600/25 border-4 border-white dark:border-gray-900 transition-all duration-200"
             >
               <motion.div
                 animate={{ rotate: isOpen ? 180 : 0 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
               >
-                {isOpen ? <ChevronDown className="h-6 w-6" /> : <ChevronUp className="h-6 w-6" />}
+                {isOpen ? (
+                  <ChevronDown className="h-7 w-7 text-white" />
+                ) : (
+                  <ChevronUp className="h-7 w-7 text-white" />
+                )}
               </motion.div>
             </Button>
-          </div>
+          </motion.div>
         </div>
       </div>
     </div>

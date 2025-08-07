@@ -45,12 +45,12 @@ import InstructorApprovalsPage from "./pages/super-admin/InstructorApprovalsPage
 import LearnerSettingsPage from "./pages/dashboard/SettingsPage";
 import InstructorSettingsPage from "./pages/instruct/SettingsPage";
 import QualificationApprovalsPage from "./pages/super-admin/QualificationApprovalsPage";
+import AIGuidelinesPage from "./pages/super-admin/AIGuidelinesPage";
 import CreateCourseTrackPage from "./pages/instruct/CreateCourseTrackPage";
 import ManageCourseTracksPage from "./pages/instruct/ManageCourseTracksPage";
 import EditCourseTrackPage from "./pages/instruct/EditCourseTrackPage";
 import CourseTrackDetailsPage from "./pages/course/CourseTrackDetailsPage";
 import MyCourseTracksPage from "./pages/dashboard/MyCourseTracksPage";
-import FloatingToolbar from "./components/global/FloatingToolbar";
 import LearnerNotesPage from "./pages/dashboard/LearnerNotesPage";
 import InstructorNotesPage from "./pages/instruct/InstructorNotesPage";
 
@@ -150,11 +150,11 @@ const App = () => {
                 <Route index element={<SuperAdminDashboardHome />} />
                 <Route path="instructor-approvals" element={<InstructorApprovalsPage />} />
                 <Route path="qualification-approvals" element={<QualificationApprovalsPage />} />
+                <Route path="ai-guidelines" element={<AIGuidelinesPage />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />
             </Routes>
-            <FloatingToolbar />
           </BrowserRouter>
         </TooltipProvider>
       </QueryClientProvider>

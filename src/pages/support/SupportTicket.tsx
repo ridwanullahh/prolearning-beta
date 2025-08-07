@@ -10,6 +10,8 @@ import { MessageSquare, ArrowLeft, HelpCircle } from 'lucide-react';
 import { authService } from '@/lib/auth';
 import { db } from '@/lib/github-sdk';
 import { toast } from 'sonner';
+import SmartHeader from '@/components/layout/SmartHeader';
+import Footer from '@/components/layout/Footer';
 
 const SupportTicket = () => {
   const [ticketData, setTicketData] = useState({
@@ -62,7 +64,10 @@ const SupportTicket = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <SmartHeader />
+
+      <div className="py-12">
       <div className="container mx-auto px-4">
         <div className="max-w-2xl mx-auto">
           {/* Header */}
@@ -215,6 +220,9 @@ const SupportTicket = () => {
           )}
         </div>
       </div>
+      </div>
+
+      <Footer />
     </div>
   );
 };

@@ -35,11 +35,28 @@ export interface User {
   isActive: boolean;
 }
 
+interface QueuedOperation {
+  id: string;
+  type: 'save' | 'insert' | 'update' | 'delete';
+  collection: string;
+  data?: any;
+  itemId?: string;
+  resolve: (value: any) => void;
+  reject: (error: Error) => void;
+  retryCount: number;
+  timestamp: number;
+}
+
 export default class UniversalSDK {
   private config: UniversalSDKConfig;
   private baseUrl: string;
   private schemas: Record<string, SchemaDefinition> = {};
   private sessions: Map<string, { user: User; expiresAt: number }> = new Map();
+  private operationQueue: QueuedOperation[] = [];
+  private isProcessingQueue = false;
+  private readonly MAX_RETRIES = 5;
+  private readonly RETRY_DELAY_BASE = 1000; // Base delay in ms
+  private readonly QUEUE_PROCESSING_DELAY = 100; // Delay between operations
 
   constructor(config: UniversalSDKConfig) {
     this.config = {
@@ -153,65 +170,162 @@ export default class UniversalSDK {
   }
 
   async save(collection: string, data: any[]): Promise<void> {
-    const path = `${this.config.basePath}/${collection}.json`;
-    const content = JSON.stringify(data, null, 2);
-    
-    try {
-      const existing = await this.getFileWithSha(path);
-      
-      const requestBody: any = {
-        message: `Update ${collection}`,
-        content: this.encodeContent(content),
-        branch: this.config.branch
+    return this.queueOperation('save', collection, data);
+  }
+
+  private async queueOperation(type: QueuedOperation['type'], collection: string, data?: any, itemId?: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const operation: QueuedOperation = {
+        id: this.generateId(),
+        type,
+        collection,
+        data,
+        itemId,
+        resolve,
+        reject,
+        retryCount: 0,
+        timestamp: Date.now()
       };
 
-      if (existing) {
-        requestBody.sha = existing.sha;
+      this.operationQueue.push(operation);
+      this.processQueue();
+    });
+  }
+
+  private async processQueue(): Promise<void> {
+    if (this.isProcessingQueue) return;
+    this.isProcessingQueue = true;
+
+    console.log(`Processing GitHub operation queue: ${this.operationQueue.length} operations pending`);
+
+    while (this.operationQueue.length > 0) {
+      const operation = this.operationQueue.shift();
+      if (!operation) continue;
+
+      const startTime = Date.now();
+      console.log(`Executing ${operation.type} operation on ${operation.collection} (ID: ${operation.id})`);
+
+      try {
+        const result = await this.executeOperation(operation);
+        const duration = Date.now() - startTime;
+        console.log(`✅ ${operation.type} operation completed in ${duration}ms`);
+        operation.resolve(result);
+      } catch (error) {
+        const duration = Date.now() - startTime;
+        console.error(`❌ ${operation.type} operation failed after ${duration}ms:`, error);
+        await this.handleOperationError(operation, error as Error);
       }
 
-      await this.request(`/contents/${path}`, {
-        method: 'PUT',
-        body: JSON.stringify(requestBody)
-      });
-    } catch (error: any) {
-      if (error.message.includes('409')) {
-        // Conflict - try to merge
-        await this.handleConflict(path, content);
-      } else {
-        throw error;
-      }
+      // Small delay between operations to prevent overwhelming GitHub API
+      await new Promise(resolve => setTimeout(resolve, this.QUEUE_PROCESSING_DELAY));
+    }
+
+    console.log('✅ GitHub operation queue processing completed');
+    this.isProcessingQueue = false;
+  }
+
+  private async executeOperation(operation: QueuedOperation): Promise<any> {
+    const { type, collection, data, itemId } = operation;
+
+    switch (type) {
+      case 'save':
+        return this.executeSave(collection, data);
+      case 'insert':
+        return this.executeInsert(collection, data);
+      case 'update':
+        return this.executeUpdate(collection, itemId!, data);
+      case 'delete':
+        return this.executeDelete(collection, itemId!);
+      default:
+        throw new Error(`Unknown operation type: ${type}`);
     }
   }
 
-  private async handleConflict(path: string, newContent: string): Promise<void> {
-    try {
-      // Get the latest version
-      const latest = await this.getFileWithSha(path);
-      if (!latest) {
-        throw new Error('Could not resolve conflict - file not found');
-      }
+  private async executeSave(collection: string, data: any[]): Promise<void> {
+    const path = `${this.config.basePath}/${collection}.json`;
+    const content = JSON.stringify(data, null, 2);
 
-      // Parse both versions
-      const latestData = JSON.parse(latest.content);
-      const newData = JSON.parse(newContent);
+    // Ensure collection exists
+    await this.ensureCollectionExists(collection);
 
-      // Simple merge strategy - combine arrays and deduplicate by id
-      const merged = this.mergeData(latestData, newData);
+    const existing = await this.getFileWithSha(path);
 
-      // Save with latest SHA
-      await this.request(`/contents/${path}`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          message: `Resolve conflict in ${path}`,
-          content: this.encodeContent(JSON.stringify(merged, null, 2)),
-          sha: latest.sha,
-          branch: this.config.branch
-        })
-      });
-    } catch (error) {
-      console.error('Conflict resolution failed:', error);
-      throw error;
+    const requestBody: any = {
+      message: `Update ${collection}`,
+      content: this.encodeContent(content),
+      branch: this.config.branch
+    };
+
+    if (existing) {
+      requestBody.sha = existing.sha;
     }
+
+    await this.request(`/contents/${path}`, {
+      method: 'PUT',
+      body: JSON.stringify(requestBody)
+    });
+  }
+
+  private async handleOperationError(operation: QueuedOperation, error: Error): Promise<void> {
+    const isConflict = error.message.includes('409');
+    const isRateLimit = error.message.includes('403') && error.message.includes('rate limit');
+
+    if (isConflict && operation.retryCount < this.MAX_RETRIES) {
+      // Handle conflict with intelligent retry
+      try {
+        await this.resolveConflictAndRetry(operation);
+        return;
+      } catch (conflictError) {
+        console.error('Conflict resolution failed:', conflictError);
+      }
+    }
+
+    if ((isRateLimit || isConflict) && operation.retryCount < this.MAX_RETRIES) {
+      // Exponential backoff retry
+      operation.retryCount++;
+      const delay = this.RETRY_DELAY_BASE * Math.pow(2, operation.retryCount - 1);
+
+      console.log(`Retrying operation ${operation.id} (attempt ${operation.retryCount}/${this.MAX_RETRIES}) after ${delay}ms`);
+
+      setTimeout(() => {
+        this.operationQueue.unshift(operation); // Add back to front of queue
+        this.processQueue();
+      }, delay);
+
+      return;
+    }
+
+    // Max retries exceeded or non-recoverable error
+    console.error(`Operation ${operation.id} failed after ${operation.retryCount} retries:`, error);
+    operation.reject(error);
+  }
+
+  private async resolveConflictAndRetry(operation: QueuedOperation): Promise<void> {
+    if (operation.type !== 'save') {
+      throw new Error('Conflict resolution only supported for save operations');
+    }
+
+    const path = `${this.config.basePath}/${operation.collection}.json`;
+
+    // Get the latest version
+    const latest = await this.getFileWithSha(path);
+    if (!latest) {
+      throw new Error('Could not resolve conflict - file not found');
+    }
+
+    // Parse both versions
+    const latestData = JSON.parse(latest.content);
+    const newData = operation.data;
+
+    // Intelligent merge strategy
+    const merged = this.mergeData(latestData, newData);
+
+    // Update operation with merged data and retry
+    operation.data = merged;
+    operation.retryCount++;
+
+    // Add back to queue for retry
+    this.operationQueue.unshift(operation);
   }
 
   private mergeData(existing: any[], incoming: any[]): any[] {
@@ -241,13 +355,52 @@ export default class UniversalSDK {
     const path = `${this.config.basePath}/${collection}.json`;
     try {
       const file = await this.getFileWithSha(path);
-      if (!file || !file.content) return [];
+      if (!file || !file.content) {
+        // Auto-create collection if it doesn't exist
+        await this.ensureCollectionExists(collection);
+        return [];
+      }
       return JSON.parse(file.content);
     } catch (error: any) {
       if (error.message.includes('404')) {
+        // Auto-create collection if it doesn't exist
+        await this.ensureCollectionExists(collection);
         return [];
       }
       throw error;
+    }
+  }
+
+  private async ensureCollectionExists(collection: string): Promise<void> {
+    const path = `${this.config.basePath}/${collection}.json`;
+
+    try {
+      // Check if collection already exists
+      await this.getFileWithSha(path);
+      return; // Collection exists, nothing to do
+    } catch (error: any) {
+      if (error.message.includes('404')) {
+        // Collection doesn't exist, create it with empty array
+        console.log(`Auto-creating collection: ${collection}`);
+
+        try {
+          await this.request(`/contents/${path}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+              message: `Create ${collection} collection`,
+              content: this.encodeContent('[]'),
+              branch: this.config.branch
+            })
+          });
+        } catch (createError: any) {
+          // If creation fails due to conflict, collection was created by another process
+          if (!createError.message.includes('409')) {
+            throw createError;
+          }
+        }
+      } else {
+        throw error;
+      }
     }
   }
 
@@ -257,9 +410,13 @@ export default class UniversalSDK {
   }
 
   async insert<T = any>(collection: string, item: Partial<T>): Promise<T & { id: string; uid: string }> {
+    return this.queueOperation('insert', collection, item);
+  }
+
+  private async executeInsert<T = any>(collection: string, item: Partial<T>): Promise<T & { id: string; uid: string }> {
     const items = await this.get<T>(collection);
     const schema = this.schemas[collection];
-    
+
     const newItem = {
       id: this.generateId(),
       uid: this.generateId(),
@@ -268,7 +425,7 @@ export default class UniversalSDK {
     } as T & { id: string; uid: string };
 
     items.push(newItem);
-    await this.save(collection, items);
+    await this.executeSave(collection, items);
     return newItem;
   }
 
@@ -289,15 +446,19 @@ export default class UniversalSDK {
   }
 
   async update<T = any>(collection: string, key: string, updates: Partial<T>): Promise<T> {
+    return this.queueOperation('update', collection, updates, key);
+  }
+
+  private async executeUpdate<T = any>(collection: string, key: string, updates: Partial<T>): Promise<T> {
     const items = await this.get<T>(collection);
     const index = items.findIndex((item: any) => item.id === key || item.uid === key);
-    
+
     if (index === -1) {
       throw new Error(`Item with key ${key} not found in ${collection}`);
     }
 
     items[index] = { ...items[index], ...updates };
-    await this.save(collection, items);
+    await this.executeSave(collection, items);
     return items[index];
   }
 
@@ -321,9 +482,13 @@ export default class UniversalSDK {
   }
 
   async delete<T = any>(collection: string, key: string): Promise<void> {
+    return this.queueOperation('delete', collection, undefined, key);
+  }
+
+  private async executeDelete<T = any>(collection: string, key: string): Promise<void> {
     const items = await this.get<T>(collection);
     const filteredItems = items.filter((item: any) => item.id !== key && item.uid !== key);
-    await this.save(collection, filteredItems);
+    await this.executeSave(collection, filteredItems);
   }
 
   queryBuilder<T = any>(collection: string) {

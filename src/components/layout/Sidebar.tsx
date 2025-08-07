@@ -6,6 +6,7 @@ import {
   LifeBuoy,
   Search,
   Settings,
+  Shield,
   ShoppingBag,
   Users,
   Wallet,
@@ -72,6 +73,7 @@ const adminNavItems = [
   { href: '/super-admin/analytics', label: 'Analytics', icon: BarChart3, badge: null },
   { href: '/super-admin/instructor-approvals', label: 'Instructor Approvals', icon: Users, badge: null },
   { href: '/super-admin/qualification-approvals', label: 'Qualification Approvals', icon: GraduationCap, badge: null },
+  { href: '/super-admin/ai-guidelines', label: 'AI Guidelines', icon: Shield, badge: null },
   { href: '/super-admin/settings', label: 'Settings', icon: Settings, badge: null },
 ];
 

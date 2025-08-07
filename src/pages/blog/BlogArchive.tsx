@@ -4,9 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Calendar, Eye, User, ArrowRight } from 'lucide-react';
+import { Search, Calendar, Eye, User, ArrowRight, BookOpen, Filter } from 'lucide-react';
 import { db } from '@/lib/github-sdk';
 import { motion } from 'framer-motion';
+import SmartHeader from '@/components/layout/SmartHeader';
+import Footer from '@/components/layout/Footer';
 
 const BlogArchive = () => {
   const [posts, setPosts] = useState<any[]>([]);
@@ -54,36 +56,78 @@ const BlogArchive = () => {
   };
 
   if (loading) {
-    return <div className="text-center py-20">Loading posts...</div>;
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <SmartHeader />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">Loading blog posts...</p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
   }
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-950">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <motion.div initial={{opacity:0, y:-20}} animate={{opacity:1, y:0}} className="text-center mb-12">
-                <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900 dark:text-white">ProLearning Blog</h1>
-                <p className="mt-4 text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-                    Your source for the latest in education technology, learning science, and platform updates.
-                </p>
-            </motion.div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <SmartHeader />
 
-            <div className="mb-8 flex flex-col md:flex-row gap-4 items-center">
-                <div className="relative flex-grow w-full md:w-auto">
-                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                    <Input
-                      placeholder="Search articles..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-12 h-12 rounded-full"
-                    />
-                </div>
-                <div className="flex gap-2 flex-wrap justify-center">
-                    <Button variant={selectedCategory === '' ? 'default' : 'outline'} onClick={() => setSelectedCategory('')} className="rounded-full">All</Button>
-                    {categories.map(category => (
-                      <Button key={category} variant={selectedCategory === category ? 'default' : 'outline'} onClick={() => setSelectedCategory(category)} className="rounded-full">{category}</Button>
-                    ))}
-                </div>
+      {/* Hero Section */}
+      <section className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-gray-900 dark:to-gray-800 py-20">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center"
+          >
+            <div className="flex items-center justify-center mb-6">
+              <BookOpen className="h-12 w-12 text-green-600 mr-4" />
+              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+                ProLearning Blog
+              </h1>
             </div>
+            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+              Discover insights on education technology, learning science, platform updates,
+              and expert tips to enhance your learning journey.
+            </p>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Main Content */}
+      <section className="py-16">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Search and Filter Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="mb-12"
+            >
+              <div className="flex flex-col lg:flex-row gap-6 items-center justify-between bg-white dark:bg-gray-900 rounded-3xl p-6 shadow-lg">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                  <Input
+                    placeholder="Search articles..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-12 h-12 rounded-2xl border-gray-200 dark:border-gray-700"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Filter className="h-5 w-5 text-gray-500" />
+                  <div className="flex gap-2 flex-wrap">
+                    <Button variant={selectedCategory === '' ? 'default' : 'outline'} onClick={() => setSelectedCategory('')} className="rounded-2xl">All</Button>
+                    {categories.map(category => (
+                      <Button key={category} variant={selectedCategory === category ? 'default' : 'outline'} onClick={() => setSelectedCategory(category)} className="rounded-2xl">{category}</Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredPosts.map((post, index) => (
@@ -124,6 +168,9 @@ const BlogArchive = () => {
                 </div>
             )}
         </div>
+      </section>
+
+      <Footer />
     </div>
   );
 };

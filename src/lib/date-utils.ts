@@ -1,3 +1,3 @@
-const { formatDistanceToNow } = require('date-fns');
+import { formatDistanceToNow } from 'date-fns';
 
 export default formatDistanceToNow;

@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion';
-import { Sliders, Compass, Target, ArrowRight } from 'lucide-react';
+import { Sliders, Compass, Target, ArrowRight, Brain, Zap, TrendingUp, Users, CheckCircle, Sparkles, Award, BarChart3 } from 'lucide-react';
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
 
 const PersonalizedLearning: React.FC = () => {

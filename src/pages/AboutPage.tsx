@@ -1,4 +1,4 @@
-import Header from '@/components/layout/Header';
+import SmartHeader from '@/components/layout/SmartHeader';
 import Footer from '@/components/layout/Footer';
 import HeroSection from '@/components/about/HeroSection';
 import Philosophy from '@/components/about/Philosophy';
@@ -9,7 +9,7 @@ import JoinMovement from '@/components/about/JoinMovement';
 const AboutPage = () => {
   return (
     <div className="bg-white dark:bg-gray-950">
-      <Header />
+      <SmartHeader />
       <main>
         <HeroSection />
         <Philosophy />

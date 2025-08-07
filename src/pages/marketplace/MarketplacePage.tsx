@@ -13,14 +13,12 @@ import {
   Star,
   Users,
   Clock,
-  Award,
   Heart,
   ChevronRight,
   Grid3X3,
   List,
   SlidersHorizontal,
   X,
-  Zap,
   Palette,
   BarChart3,
   Layers3
@@ -30,6 +28,8 @@ import { authService } from '../../lib/auth';
 import { useToast } from '../../hooks/use-toast';
 import { Course, Subject, AcademicLevel } from '../../lib/types';
 import CourseTrackCard from '../../components/course/CourseTrackCard';
+import SmartHeader from '../../components/layout/SmartHeader';
+import Footer from '../../components/layout/Footer';
 
 const MarketplacePage = () => {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -238,12 +238,14 @@ const MarketplacePage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      {/* Header */}
-      <motion.div 
+      <SmartHeader />
+
+      {/* Marketplace Header */}
+      <motion.div
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 50, damping: 15 }}
-        className="bg-white dark:bg-gray-900/80 backdrop-blur-lg shadow-sm border-b dark:border-gray-800 sticky top-0 z-20"
+        className="bg-white dark:bg-gray-900/80 backdrop-blur-lg shadow-sm border-b dark:border-gray-800"
       >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
@@ -263,15 +265,16 @@ const MarketplacePage = () => {
                 placeholder="Search anything..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-12 h-12 w-full bg-gray-100 dark:bg-gray-800 border-transparent focus:ring-2 focus:ring-green-500 focus:border-transparent rounded-full"
+                className="pl-12 h-12 w-full bg-white/90 dark:bg-gray-800/90 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-green-500 focus:border-green-500 rounded-2xl shadow-lg backdrop-blur-sm"
               />
             </div>
           </div>
         </div>
       </motion.div>
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
+      <div className="py-8">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col lg:flex-row gap-8">
           {/* Filters Sidebar */}
           <AnimatePresence>
             {showFilters && (
@@ -324,15 +327,27 @@ const MarketplacePage = () => {
                 Filters
               </Button>
               <div className="flex items-center gap-4">
-                <Button variant={viewType === 'courses' ? 'secondary' : 'ghost'} onClick={() => setViewType('courses')}>Courses</Button>
-                <Button variant={viewType === 'tracks' ? 'secondary' : 'ghost'} onClick={() => setViewType('tracks')}>Course Tracks</Button>
+                <Button
+                  variant={viewType === 'courses' ? 'default' : 'outline'}
+                  onClick={() => setViewType('courses')}
+                  className="rounded-2xl"
+                >
+                  Courses
+                </Button>
+                <Button
+                  variant={viewType === 'tracks' ? 'default' : 'outline'}
+                  onClick={() => setViewType('tracks')}
+                  className="rounded-2xl"
+                >
+                  Course Tracks
+                </Button>
               </div>
               <p className="text-gray-600 dark:text-gray-400 hidden lg:block">
                 {viewType === 'courses' ? filteredCourses.length : filteredCourseTracks.length} amazing {viewType === 'courses' ? 'course' : 'track'}{filteredCourses.length !== 1 ? 's' : ''} found
               </p>
               <div className="flex items-center gap-2">
                 <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-40 rounded-full">
+                  <SelectTrigger className="w-40 rounded-2xl">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -341,8 +356,22 @@ const MarketplacePage = () => {
                     <SelectItem value="newest">Newest</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('grid')} className="rounded-full"><Grid3X3/></Button>
-                <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('list')} className="rounded-full"><List/></Button>
+                <Button
+                  variant={viewMode === 'grid' ? 'default' : 'outline'}
+                  size="icon"
+                  onClick={() => setViewMode('grid')}
+                  className="rounded-2xl"
+                >
+                  <Grid3X3/>
+                </Button>
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'outline'}
+                  size="icon"
+                  onClick={() => setViewMode('list')}
+                  className="rounded-2xl"
+                >
+                  <List/>
+                </Button>
               </div>
             </div>
 
@@ -379,8 +408,11 @@ const MarketplacePage = () => {
               </div>
             )}
           </main>
+          </div>
         </div>
       </div>
+
+      <Footer />
     </div>
   );
 };
@@ -392,7 +424,7 @@ const FilterSelect = ({ icon: Icon, label, value, onValueChange, options }: { ic
       {label}
     </label>
     <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger className="w-full rounded-full bg-gray-100 dark:bg-gray-800 border-transparent">
+      <SelectTrigger className="w-full rounded-2xl bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -408,37 +440,69 @@ const CourseCard = ({ course, getLevelName, getSubjectCategory, formatPrice }: {
   const navigate = useNavigate();
   const [isLiked, setIsLiked] = useState(false);
 
+  // Generate a gradient based on course title (brand-compliant colors)
+  const getGradientFromTitle = (title: string) => {
+    const gradients = [
+      'from-green-500 to-emerald-600',
+      'from-blue-500 to-indigo-600',
+      'from-teal-500 to-cyan-600',
+      'from-purple-500 to-violet-600',
+      'from-emerald-500 to-green-600',
+      'from-indigo-500 to-blue-600',
+      'from-cyan-500 to-teal-600',
+      'from-violet-500 to-purple-600',
+    ];
+    const index = title.length % gradients.length;
+    return gradients[index];
+  };
+
   return (
     <Card
-      className="group overflow-hidden rounded-2xl h-full flex flex-col transition-all duration-300 ease-in-out hover:shadow-2xl hover:-translate-y-2 border-transparent bg-white dark:bg-gray-800/50"
+      className="group overflow-hidden rounded-3xl h-full flex flex-col transition-all duration-300 ease-in-out hover:shadow-2xl hover:-translate-y-3 border-0 bg-white dark:bg-gray-800/50 cursor-pointer shadow-lg"
       onClick={() => navigate(`/course/${course.id}`)}
     >
-      <div className="aspect-video relative">
-        <img
-          src={course.thumbnailUrl || `https://source.unsplash.com/random/400x225?${course.title.split(' ')[0]}`}
-          alt={course.title}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+      <div className="aspect-video relative overflow-hidden">
+        <div className={`w-full h-full bg-gradient-to-br ${getGradientFromTitle(course.title)} transition-all duration-500 group-hover:scale-110`}>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <motion.div
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              transition={{ duration: 0.3 }}
+            >
+              <BookOpen className="h-20 w-20 text-white/90 drop-shadow-lg" />
+            </motion.div>
+          </div>
+
+          {/* Course Level Badge */}
+          <div className="absolute top-4 left-4">
+            <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm">
+              {getLevelName(course.academicLevelId)}
+            </Badge>
+          </div>
+        </div>
+
         <Button
           variant="ghost"
           size="icon"
-          className="absolute top-3 right-3 rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30"
+          className="absolute top-4 right-4 rounded-2xl bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-all duration-200"
           onClick={(e) => { e.stopPropagation(); setIsLiked(!isLiked); }}
         >
-          <Heart className={`h-5 w-5 ${isLiked ? 'text-red-500 fill-current' : ''}`} />
+          <Heart className={`h-5 w-5 transition-colors duration-200 ${isLiked ? 'text-pink-400 fill-current' : 'text-white'}`} />
         </Button>
-        <div className="absolute bottom-3 left-3 right-3">
-          <h3 className="font-bold text-lg text-white line-clamp-2">{course.title}</h3>
-        </div>
       </div>
 
-      <CardContent className="p-4 flex-grow flex flex-col">
-        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-3">
-          <Badge variant="outline" className="capitalize">{getSubjectCategory(course.subjectId)}</Badge>
-          <Badge variant="outline">{getLevelName(course.academicLevelId)}</Badge>
+      <CardContent className="p-6 flex-grow flex flex-col">
+        <div className="flex items-center gap-2 mb-3">
+          <Badge variant="secondary" className="text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+            {getSubjectCategory(course.subjectId)}
+          </Badge>
         </div>
-        <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 line-clamp-2 flex-grow">{course.description}</p>
+
+        <h3 className="font-bold text-xl text-gray-900 dark:text-white mb-3 line-clamp-2 leading-tight group-hover:text-green-600 transition-colors duration-200">
+          {course.title}
+        </h3>
+
+        <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 line-clamp-3 leading-relaxed flex-grow">{course.description}</p>
         
         <Separator className="my-3" />
 
@@ -448,11 +512,22 @@ const CourseCard = ({ course, getLevelName, getSubjectCategory, formatPrice }: {
           <div className="flex items-center gap-1"><Star className="h-4 w-4 text-yellow-400"/>{course.rating || 'New'}</div>
         </div>
 
-        <div className="mt-4 flex items-center justify-between">
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatPrice(course.price || 0)}</p>
-          <Button size="sm" className="rounded-full bg-green-500 hover:bg-green-600 text-white">
-            View Details
-            <ChevronRight className="ml-1 h-4 w-4" />
+        <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
+          <div className="flex flex-col">
+            <span className="text-2xl font-bold text-green-600 dark:text-green-400">
+              {formatPrice(course.price || 0)}
+            </span>
+            {(course.price || 0) > 0 && (
+              <span className="text-xs text-gray-500 dark:text-gray-400">One-time payment</span>
+            )}
+          </div>
+
+          <Button
+            size="sm"
+            className="rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+          >
+            <span className="mr-2">View Course</span>
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       </CardContent>
@@ -463,18 +538,32 @@ const CourseCard = ({ course, getLevelName, getSubjectCategory, formatPrice }: {
 const CourseListItem = ({ course, getLevelName, getSubjectCategory, formatPrice }: { course: Course, getLevelName: (levelId: string) => string, getSubjectCategory: (subjectId: string) => string, formatPrice: (price: number) => string }) => {
   const navigate = useNavigate();
 
+  // Generate a gradient based on course title (brand-compliant colors)
+  const getGradientFromTitle = (title: string) => {
+    const gradients = [
+      'from-green-500 to-emerald-600',
+      'from-blue-500 to-indigo-600',
+      'from-teal-500 to-cyan-600',
+      'from-purple-500 to-violet-600',
+      'from-emerald-500 to-green-600',
+      'from-indigo-500 to-blue-600',
+      'from-cyan-500 to-teal-600',
+      'from-violet-500 to-purple-600',
+    ];
+    const index = title.length % gradients.length;
+    return gradients[index];
+  };
+
   return (
     <Card
-      className="group transition-all duration-300 ease-in-out hover:shadow-xl hover:bg-white dark:hover:bg-gray-800/80 border-transparent bg-white/50 dark:bg-gray-800/30"
+      className="group transition-all duration-300 ease-in-out hover:shadow-xl hover:bg-white dark:hover:bg-gray-800/80 border-0 bg-white dark:bg-gray-800/50 cursor-pointer rounded-2xl"
       onClick={() => navigate(`/course/${course.id}`)}
     >
-      <CardContent className="p-4">
+      <CardContent className="p-6">
         <div className="flex items-center gap-6">
-          <img
-            src={course.thumbnailUrl || `https://source.unsplash.com/random/200x200?${course.title.split(' ')[0]}`}
-            alt={course.title}
-            className="w-32 h-32 object-cover rounded-xl flex-shrink-0"
-          />
+          <div className={`w-32 h-32 bg-gradient-to-br ${getGradientFromTitle(course.title)} rounded-2xl flex-shrink-0 flex items-center justify-center`}>
+            <BookOpen className="h-12 w-12 text-white/80" />
+          </div>
           <div className="flex-grow">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
@@ -492,8 +581,8 @@ const CourseListItem = ({ course, getLevelName, getSubjectCategory, formatPrice 
                 <div className="flex items-center gap-1"><Clock className="h-4 w-4"/>{course.duration} hours</div>
                 <div className="flex items-center gap-1"><Star className="h-4 w-4 text-yellow-400"/>{course.rating || 'New'}</div>
               </div>
-              <Button size="sm" className="rounded-full">
-                View Details
+              <Button size="sm" className="rounded-2xl bg-green-600 hover:bg-green-700 text-white">
+                View Course
                 <ChevronRight className="ml-1 h-4 w-4" />
               </Button>
             </div>

@@ -1,6 +1,7 @@
 
 import { config } from './config';
 import { db } from './github-sdk';
+import { aiGuidelinesService } from './ai-guidelines-service';
 
 export interface StreamingAIService {
   generateCourseWithStreaming: (courseSpec: any, onProgress: (progress: any) => void) => Promise<any>;
@@ -216,6 +217,9 @@ class StreamingCourseGenerator {
   }
 
   private async executeAIRequest(prompt: string, type: string): Promise<string> {
+    // Get AI guidelines for this content type
+    const guidelinesPrompt = await aiGuidelinesService.buildGuidelinesPrompt(type, 'content');
+
     // Try Chutes AI first
     if (config.ai.chutesToken) {
       try {
@@ -230,7 +234,9 @@ class StreamingCourseGenerator {
             messages: [
               {
                 role: 'system',
-                content: `You are an expert educational content creator. Generate ${type} content in JSON format. IMPORTANT: Your response must only be the JSON object, without any markdown, backticks, or other explanatory text.`
+                content: `You are an expert educational content creator. Generate ${type} content in JSON format. IMPORTANT: Your response must only be the JSON object, without any markdown, backticks, or other explanatory text.
+
+${guidelinesPrompt}`
               },
               {
                 role: 'user',
@@ -253,20 +259,35 @@ class StreamingCourseGenerator {
           throw new Error('ReadableStream not available');
         }
 
-        let chunks = '';
+        let fullContent = '';
+        const decoder = new TextDecoder();
+
         while (true) {
           const { done, value } = await reader.read();
-          if (done) {
-            break;
-          }
-          chunks += new TextDecoder().decode(value);
-        }
-        return chunks;
+          if (done) break;
 
-        if (response.ok) {
-          const data = await response.json();
-          return data.choices[0].message.content;
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              if (data === '[DONE]') continue;
+
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed.choices?.[0]?.delta?.content) {
+                  fullContent += parsed.choices[0].delta.content;
+                }
+              } catch (e) {
+                // Skip invalid JSON lines
+                continue;
+              }
+            }
+          }
         }
+
+        return fullContent;
       } catch (error) {
         console.warn('Chutes AI failed, trying Gemini:', error);
       }

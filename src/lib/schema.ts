@@ -26,8 +26,22 @@ export const schema = {
     createdAt: 'string',
     updatedAt: 'string',
   },
+  modules: {
+    courseId: 'string',
+    title: 'string',
+    description: 'string',
+    order: 'number',
+    prerequisites: 'array', // Array of prerequisite module IDs
+    dripSchedule: 'object', // { enabled: boolean, delayDays: number, unlockDate: string }
+    isPublished: 'boolean',
+    estimatedDuration: 'number', // in minutes
+    objectives: 'array', // Array of learning objectives
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
   lessons: {
     courseId: 'string',
+    moduleId: 'string', // Reference to parent module
     title: 'string',
     description: 'string',
     order: 'number',
@@ -38,6 +52,9 @@ export const schema = {
     keyPoints: 'array', // Array of key point objects
     mindMap: 'object', // Mind map object
     isAiGenerated: 'boolean',
+    prerequisites: 'array', // Array of prerequisite lesson IDs
+    dripSchedule: 'object', // { enabled: boolean, delayDays: number, unlockDate: string }
+    isPublished: 'boolean',
     createdAt: 'string',
     updatedAt: 'string',
   },
@@ -306,6 +323,20 @@ export const schema = {
     lastMessageAt: 'string',
     messageCount: 'number',
     tags: 'array',
+    createdAt: 'string',
+    updatedAt: 'string',
+  },
+  aiGuidelines: {
+    title: 'string',
+    description: 'string',
+    category: 'string', // 'content', 'curriculum', 'assessment', 'general'
+    priority: 'string', // 'high', 'medium', 'low'
+    guideline: 'string', // The actual guideline text
+    isActive: 'boolean',
+    appliesTo: 'array', // Array of content types: ['courses', 'lessons', 'quizzes', 'flashcards']
+    tags: 'array',
+    examples: 'array', // Array of example scenarios
+    createdBy: 'string',
     createdAt: 'string',
     updatedAt: 'string',
   },

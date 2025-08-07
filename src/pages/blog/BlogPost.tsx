@@ -3,9 +3,12 @@ import { useParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Eye, User, ArrowLeft, Share2, Twitter, Linkedin, Facebook } from 'lucide-react';
+import { Calendar, Eye, User, ArrowLeft, Share2, Twitter, Linkedin, Facebook, BookOpen } from 'lucide-react';
 import { db } from '@/lib/github-sdk';
 import { motion } from 'framer-motion';
+import Footer from '@/components/layout/Footer';
+import SmartHeader from '@/components/layout/SmartHeader';
+
 
 const BlogPost = () => {
   const { slug } = useParams();
@@ -48,11 +51,43 @@ const BlogPost = () => {
     return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
   };
 
-  if (loading) return <div className="text-center py-20">Loading post...</div>;
-  if (!post) return <div className="text-center py-20">Post not found.</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <SmartHeader />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">Loading blog post...</p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!post) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <SmartHeader />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Post Not Found</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">The blog post you're looking for doesn't exist.</p>
+            <Button asChild>
+              <Link to="/blog">Back to Blog</Link>
+            </Button>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <SmartHeader />
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <motion.div initial={{opacity:0, y:-20}} animate={{opacity:1, y:0}}>
                 <Link to="/blog" className="inline-flex items-center text-gray-600 dark:text-gray-300 hover:text-green-600 transition-colors mb-8">
@@ -109,6 +144,8 @@ const BlogPost = () => {
                 )}
             </div>
         </div>
+
+        <Footer />
     </div>
   );
 };

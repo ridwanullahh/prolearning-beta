@@ -22,6 +22,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { authService } from '@/lib/auth';
 import { db } from '@/lib/github-sdk';
+import ModuleManager from '@/components/course/ModuleManager';
 import {
 	ArrowLeft,
 	BookOpen,
@@ -262,35 +263,71 @@ const CurriculumStep = ({ courseId, lessons, setLessons }: { courseId: any, less
         }
     };
 
+    const handleModuleSelect = (moduleId: string) => {
+        navigate(`/instruct/courses/${courseId}/modules/${moduleId}/lessons/new`);
+    };
+
+    const handleLessonSelect = (lessonId: string) => {
+        navigate(`/instruct/courses/${courseId}/lessons/${lessonId}/edit`);
+    };
+
+    if (!courseId) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Course Curriculum</CardTitle>
+                    <CardDescription>Structure your course with modules and lessons.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-center py-8 text-muted-foreground">
+                        <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50"/>
+                        <p>Please save the course details first to start building your curriculum.</p>
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
+
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Course Curriculum</CardTitle>
-                <CardDescription>Structure your course by adding lessons and modules.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="space-y-4">
-                    {lessons.map((lesson, index) => (
-                        <div key={lesson.id || index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                            <div className="flex items-center gap-3">
-                                <BookOpen className="h-5 w-5 text-muted-foreground"/>
-                                <div>
-                                    <p className="font-semibold">Lesson {index + 1}: {lesson.title}</p>
-                                    <p className="text-sm text-muted-foreground">{lesson.description}</p>
+        <div className="space-y-6">
+            <ModuleManager
+                courseId={courseId}
+                onModuleSelect={handleModuleSelect}
+                onLessonSelect={handleLessonSelect}
+            />
+
+            {/* Legacy lesson support - will be migrated to modules */}
+            {lessons.length > 0 && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Legacy Lessons</CardTitle>
+                        <CardDescription>These lessons need to be organized into modules.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-2">
+                            {lessons.map((lesson: any, index: number) => (
+                                <div key={lesson.id || index} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                                    <div className="flex items-center gap-3">
+                                        <BookOpen className="h-5 w-5 text-yellow-600"/>
+                                        <div>
+                                            <p className="font-semibold">Lesson {index + 1}: {lesson.title}</p>
+                                            <p className="text-sm text-muted-foreground">{lesson.description}</p>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleLessonSelect(lesson.id)}
+                                    >
+                                        <Settings className="h-4 w-4"/>
+                                    </Button>
                                 </div>
-                            </div>
-                            <div className="flex gap-2">
-                                <Button variant="outline" size="sm" onClick={() => handleEditLesson(lesson.id)}><Settings className="h-4 w-4"/></Button>
-                                <Button variant="destructive" size="sm" onClick={() => handleDeleteLesson(lesson.id)}><Trash2 className="h-4 w-4"/></Button>
-                            </div>
+                            ))}
                         </div>
-                    ))}
-                    <Button variant="outline" className="w-full" onClick={handleAddLesson}>
-                        <Plus className="mr-2 h-4 w-4"/> Add Lesson
-                    </Button>
-                </div>
-            </CardContent>
-        </Card>
+                    </CardContent>
+                </Card>
+            )}
+        </div>
     );
 };
 

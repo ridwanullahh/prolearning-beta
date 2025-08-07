@@ -14,6 +14,7 @@ import CourseGenerationProgress from './CourseGenerationProgress';
 import { CourseParser } from '@/lib/courseParser';
 import { db } from '@/lib/github-sdk';
 import { authService } from '@/lib/auth';
+import CurriculumSetupStep from './CurriculumSetupStep';
 import { Loader2, BookOpen, Brain, Target, Clock, Upload } from 'lucide-react';
 
 interface CourseGenerationWizardProps {
@@ -54,7 +55,7 @@ const CourseGenerationWizard = ({ onCourseGenerated }: CourseGenerationWizardPro
   });
 
   const { toast } = useToast();
-  const totalSteps = 5;
+  const totalSteps = 6; // Updated to include curriculum setup step
 
   const academicLevels = [
     'Primary School', 'Junior Secondary', 'Senior Secondary', 
@@ -347,6 +348,19 @@ const CourseGenerationWizard = ({ onCourseGenerated }: CourseGenerationWizardPro
 
       case 3:
         return (
+          <CurriculumSetupStep
+            curriculum={formData.curriculum}
+            setCurriculum={(curriculum) => setFormData({...formData, curriculum})}
+            onNext={() => setCurrentStep(4)}
+            onBack={() => setCurrentStep(2)}
+            courseTitle={formData.courseTitle}
+            academicLevel={formData.academicLevel}
+            subject={formData.subject}
+          />
+        );
+
+      case 4:
+        return (
           <div className="space-y-4">
             <div className="flex items-center space-x-2 mb-4">
               <Brain className="h-5 w-5 text-purple-600" />
@@ -454,22 +468,12 @@ const CourseGenerationWizard = ({ onCourseGenerated }: CourseGenerationWizardPro
           </div>
         );
 
-      case 4:
+      case 5:
         return (
           <div className="space-y-4">
             <div className="flex items-center space-x-2 mb-4">
               <Target className="h-5 w-5 text-indigo-600" />
-              <h3 className="text-lg font-semibold">Personalization</h3>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="curriculum">Curriculum (Optional)</Label>
-              <Textarea
-                placeholder="If you have a predefined curriculum you want the AI to follow, paste it here..."
-                value={formData.curriculum}
-                onChange={(e) => setFormData({...formData, curriculum: e.target.value})}
-                rows={6}
-              />
+              <h3 className="text-lg font-semibold">Additional Options</h3>
             </div>
 
             <div className="space-y-2">
@@ -480,10 +484,20 @@ const CourseGenerationWizard = ({ onCourseGenerated }: CourseGenerationWizardPro
                 <p className="text-xs">Upload your study materials for AI to use</p>
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="additionalInstructions">Additional Instructions (Optional)</Label>
+              <Textarea
+                placeholder="Any specific instructions for the AI course generator..."
+                value={formData.additionalInstructions}
+                onChange={(e) => setFormData({...formData, additionalInstructions: e.target.value})}
+                rows={4}
+              />
+            </div>
           </div>
         );
 
-      case 5:
+      case 6:
         return (
           <div className="space-y-4">
             <div className="flex items-center space-x-2 mb-4">
@@ -543,33 +557,36 @@ const CourseGenerationWizard = ({ onCourseGenerated }: CourseGenerationWizardPro
         ) : (
           renderStep()
         )}
-        
-        <div className="flex justify-between mt-6">
-          <Button
-            variant="outline"
-            onClick={handlePrevious}
-            disabled={currentStep === 1}
-          >
-            Previous
-          </Button>
-          
-          {currentStep < totalSteps ? (
+
+        {/* Hide navigation for curriculum step as it has its own navigation */}
+        {currentStep !== 3 && (
+          <div className="flex justify-between mt-6">
             <Button
-              onClick={handleNext}
-              disabled={!formData.academicLevel || !formData.subject}
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={currentStep === 1}
             >
-              Next
+              Previous
             </Button>
-          ) : (
-            <Button
-              onClick={handleGenerateCourse}
-              disabled={isGenerating || !formData.academicLevel || !formData.subject}
-            >
-              {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Generate Course
-            </Button>
-          )}
-        </div>
+
+            {currentStep < totalSteps ? (
+              <Button
+                onClick={handleNext}
+                disabled={!formData.academicLevel || !formData.subject}
+              >
+                Next
+              </Button>
+            ) : (
+              <Button
+                onClick={handleGenerateCourse}
+                disabled={isGenerating || !formData.academicLevel || !formData.subject}
+              >
+                {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Generate Course
+              </Button>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

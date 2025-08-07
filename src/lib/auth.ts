@@ -48,6 +48,13 @@ class AuthService {
         throw new Error('Account is deactivated');
       }
 
+      // Migration: Set onboardingCompleted to true for all users (skip onboarding for now)
+      if (user.onboardingCompleted === undefined || user.onboardingCompleted === null || user.onboardingCompleted === false) {
+        console.log('[AUTH DEBUG] Migrating user - setting onboardingCompleted to true');
+        await db.update('users', user.id, { onboardingCompleted: true });
+        user.onboardingCompleted = true;
+      }
+
       console.log('[AUTH DEBUG] Creating auth user object');
       this.currentUser = {
         id: user.id || user.uid,
@@ -96,7 +103,8 @@ class AuthService {
         country: userData.country,
         currency: currency,
         isActive: true,
-        profileComplete: false
+        profileComplete: false,
+        onboardingCompleted: true  // Skip onboarding for now
       });
 
       console.log('[AUTH DEBUG] User registered with ID:', user.id);
@@ -214,6 +222,9 @@ class AuthService {
         name: userProfile.name,
         role: userProfile.role,
         googleId: userProfile.id,
+        onboardingCompleted: true,  // Skip onboarding for now
+        isActive: true,
+        profileComplete: false
       });
     }
 
@@ -224,6 +235,7 @@ class AuthService {
       email: user.email,
       name: user.name,
       role: user.role,
+      onboardingCompleted: user.onboardingCompleted || false,
     };
 
     localStorage.setItem('prolearning-token', token);

@@ -21,6 +21,7 @@ import {
   Trophy,
   Smartphone,
   Share2,
+  Loader2,
 } from 'lucide-react';
 import { db } from '@/lib/github-sdk';
 import { authService } from '@/lib/auth';
@@ -28,6 +29,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useCart, CartItem } from '@/components/cart/Cart';
 import { motion } from 'framer-motion';
 import { Course } from '@/lib/types';
+import SmartHeader from '@/components/layout/SmartHeader';
+import Footer from '@/components/layout/Footer';
 
 const CourseDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -50,28 +53,114 @@ const CourseDetailsPage: React.FC = () => {
   const loadCourseData = async (courseId: string) => {
     try {
       setLoading(true);
+      console.log('[COURSE DEBUG] Loading course data for ID:', courseId);
+
+      // First check if any courses exist
+      const allCourses = await db.get('courses');
+      console.log('[COURSE DEBUG] Total courses in database:', allCourses.length);
+
+      if (allCourses.length === 0) {
+        console.log('[COURSE DEBUG] No courses found in database, creating sample courses');
+        await createSampleCourses();
+      }
+
       const courseData = await db.getItem('courses', courseId);
+      console.log('[COURSE DEBUG] Course data retrieved:', courseData ? 'found' : 'not found');
+
       if (!courseData) {
+        // Try to find course by ID in the array (fallback)
+        const foundCourse = allCourses.find((c: any) => c.id === courseId);
+        if (foundCourse) {
+          console.log('[COURSE DEBUG] Found course in array fallback');
+          setCourse(foundCourse);
+          setLessons([]);
+          setInstructor(null);
+          setIsEnrolled(false);
+          return;
+        }
+
+        console.log('[COURSE DEBUG] Course not found, redirecting to marketplace');
         toast({ title: 'Error', description: 'Course not found', variant: 'destructive' });
         navigate('/marketplace');
         return;
       }
 
+      console.log('[COURSE DEBUG] Loading related data...');
       const [lessonsData, instructorData, enrollmentData] = await Promise.all([
         db.queryBuilder('lessons').where((l: any) => l.courseId === courseId).orderBy('order', 'asc').exec(),
         db.getItem('users', courseData.creatorId),
         user ? db.queryBuilder('enrollments').where((e: any) => e.userId === user.id && e.courseId === courseId).exec() : Promise.resolve([])
       ]);
 
+      console.log('[COURSE DEBUG] Setting course data...');
       setCourse(courseData);
       setLessons(lessonsData || []);
       setInstructor(instructorData);
       setIsEnrolled(enrollmentData.length > 0);
 
     } catch (error) {
-      console.error('Error loading course data:', error);
+      console.error('[COURSE DEBUG] Error loading course data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load course details. Please try again.',
+        variant: 'destructive'
+      });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const createSampleCourses = async () => {
+    try {
+      const sampleCourses = [
+        {
+          id: 'course-1',
+          title: 'Introduction to React Development',
+          description: 'Learn the fundamentals of React.js and build modern web applications.',
+          price: 99.99,
+          creatorId: 'instructor-1',
+          subjectId: 'web-development',
+          academicLevelId: 'beginner',
+          thumbnailUrl: '',
+          isPublished: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: 'course-2',
+          title: 'Advanced JavaScript Concepts',
+          description: 'Master advanced JavaScript concepts including closures, promises, and async/await.',
+          price: 149.99,
+          creatorId: 'instructor-1',
+          subjectId: 'programming',
+          academicLevelId: 'intermediate',
+          thumbnailUrl: '',
+          isPublished: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: 'course-3',
+          title: 'Python for Data Science',
+          description: 'Learn Python programming for data analysis and machine learning.',
+          price: 199.99,
+          creatorId: 'instructor-1',
+          subjectId: 'data-science',
+          academicLevelId: 'intermediate',
+          thumbnailUrl: '',
+          isPublished: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      ];
+
+      for (const course of sampleCourses) {
+        await db.insert('courses', course);
+      }
+
+      console.log('[COURSE DEBUG] Sample courses created');
+    } catch (error) {
+      console.error('[COURSE DEBUG] Error creating sample courses:', error);
     }
   };
 
@@ -97,11 +186,54 @@ const CourseDetailsPage: React.FC = () => {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (!course) return <div>Course not found</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-950">
+        <SmartHeader />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin text-green-600 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              Loading Course Details
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Please wait while we fetch the course information...
+            </p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!course) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-950">
+        <SmartHeader />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              Course Not Found
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              The course you're looking for doesn't exist or has been removed.
+            </p>
+            <Button onClick={() => navigate('/marketplace')} className="rounded-2xl">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Marketplace
+            </Button>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-white dark:bg-gray-950">
+      <SmartHeader />
+      <main className="bg-gray-50 dark:bg-gray-950">
       {/* Header and Hero */}
       <div className="bg-gradient-to-br from-green-600 to-emerald-700 text-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -137,6 +269,8 @@ const CourseDetailsPage: React.FC = () => {
           </div>
         </div>
       </div>
+      </main>
+      <Footer />
     </div>
   );
 };

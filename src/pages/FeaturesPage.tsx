@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import Header from '@/components/layout/Header';
+import SmartHeader from '@/components/layout/SmartHeader';
 import Footer from '@/components/layout/Footer';
 import AiCourseGeneration from '@/components/features/AiCourseGeneration';
 import SmartLearningTools from '@/components/features/SmartLearningTools';
@@ -11,7 +11,7 @@ import ProgressTracking from '@/components/features/ProgressTracking';
 const FeaturesPage = () => {
   return (
     <div className="bg-white dark:bg-gray-950">
-      <Header />
+      <SmartHeader />
       <main>
         <section className="bg-green-50/50 py-20 text-center dark:bg-gray-900/50">
           <motion.div

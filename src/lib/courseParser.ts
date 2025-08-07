@@ -325,20 +325,49 @@ export class CourseParser {
             lessonId: insertedLesson.id,
             courseId,
             title: lessonData.mindMap.title,
-            data: lessonData.mindMap.nodes,
+            data: { nodes: lessonData.mindMap.nodes }, // Wrap nodes in data object
             nodeCount: lessonData.mindMap.nodes.length,
             connections: lessonData.mindMap.nodes.filter(n => n.children && n.children.length > 0)
           });
         }
       }
       
-      // Bulk insert all the things
-      if (lessonContentsToInsert.length > 0) await db.bulkInsert('lessonContents', lessonContentsToInsert);
-      if (quizzesToInsert.length > 0) await db.bulkInsert('quizzes', quizzesToInsert);
-      if (flashcardsToInsert.length > 0) await db.bulkInsert('flashcards', flashcardsToInsert);
-      if (keyPointsToInsert.length > 0) await db.bulkInsert('keyPoints', keyPointsToInsert);
-      if (mindMapsToInsert.length > 0) await db.bulkInsert('mindMaps', mindMapsToInsert);
-      
+      // Bulk insert all the things with detailed logging
+      console.log('Saving course content to database:', {
+        lessonContents: lessonContentsToInsert.length,
+        quizzes: quizzesToInsert.length,
+        flashcards: flashcardsToInsert.length,
+        keyPoints: keyPointsToInsert.length,
+        mindMaps: mindMapsToInsert.length
+      });
+
+      if (lessonContentsToInsert.length > 0) {
+        console.log('Saving lesson contents...');
+        await db.bulkInsert('lessonContents', lessonContentsToInsert);
+      }
+
+      if (quizzesToInsert.length > 0) {
+        console.log('Saving quizzes...');
+        await db.bulkInsert('quizzes', quizzesToInsert);
+      }
+
+      if (flashcardsToInsert.length > 0) {
+        console.log('Saving flashcards...');
+        await db.bulkInsert('flashcards', flashcardsToInsert);
+      }
+
+      if (keyPointsToInsert.length > 0) {
+        console.log('Saving key points...');
+        await db.bulkInsert('keyPoints', keyPointsToInsert);
+      }
+
+      if (mindMapsToInsert.length > 0) {
+        console.log('Saving mind maps...');
+        await db.bulkInsert('mindMaps', mindMapsToInsert);
+      }
+
+      console.log('All course content saved successfully');
+
     } catch (error) {
       console.error('Error saving parsed course to database:', error);
       throw error;

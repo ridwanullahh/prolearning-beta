@@ -1,4 +1,4 @@
-import Header from '@/components/layout/Header';
+import SmartHeader from '@/components/layout/SmartHeader';
 import Footer from '@/components/layout/Footer';
 import HeroSection from '@/components/instructor/apply/HeroSection';
 import WhyProLearning from '@/components/instructor/apply/WhyProLearning';
@@ -14,7 +14,7 @@ import FinalCTA from '@/components/instructor/apply/FinalCTA';
 const BecomeInstructorPage = () => {
   return (
     <div className="bg-white dark:bg-gray-950">
-      <Header />
+      <SmartHeader />
       <main>
         <HeroSection />
         <WhyProLearning />
