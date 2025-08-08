@@ -19,6 +19,11 @@ import ForumModal from '../forum/ForumModal';
 import AIChatModal from '../ai-chat/AIChatModal';
 import NotesModal from '../notes/NotesModal';
 import MessagingModal from '../messaging/MessagingModal';
+// Inline panels for sidebar (sheets)
+import ThreadList from '../forum/ThreadList';
+import SessionList from '../ai-chat/SessionList';
+import NoteList from '../notes/NoteList';
+import ConversationList from '../messaging/ConversationList';
 
 import { authService } from '@/lib/auth';
 import { db } from '@/lib/github-sdk';
@@ -139,14 +144,15 @@ const FloatingToolbar: React.FC = () => {
               <span className="text-xs">Forum</span>
             </div>
           </SheetTrigger>
-          <SheetContent side="right" className="w-96">
+          <SheetContent side="right" className="w-[90vw] sm:w-[480px] md:w-[560px] lg:w-[720px] xl:w-[820px]">
             <SheetHeader>
               <SheetTitle>Course Forum</SheetTitle>
             </SheetHeader>
             <div className="mt-6 h-full">
-              <ForumModal courseId={courseId || ''} lessonId={lessonId || undefined}>
-                <div className="w-full h-full">Forum Content</div>
-              </ForumModal>
+              {/* Inline forum panel */}
+              <div className="h-[calc(100vh-10rem)] overflow-hidden">
+                <ThreadList courseId={courseId || ''} lessonId={lessonId || undefined} />
+              </div>
             </div>
           </SheetContent>
         </Sheet>
@@ -167,14 +173,15 @@ const FloatingToolbar: React.FC = () => {
               <span className="text-xs">AI Support</span>
             </div>
           </SheetTrigger>
-          <SheetContent side="right" className="w-96">
+          <SheetContent side="right" className="w-[90vw] sm:w-[480px] md:w-[560px] lg:w-[720px] xl:w-[820px]">
             <SheetHeader>
               <SheetTitle>AI Learning Assistant</SheetTitle>
             </SheetHeader>
             <div className="mt-6 h-full">
-              <AIChatModal>
-                <div className="w-full h-full">AI Chat Content</div>
-              </AIChatModal>
+              {/* Inline AI chat panel */}
+              <div className="h-[calc(100vh-10rem)] overflow-hidden">
+                <SessionList />
+              </div>
             </div>
           </SheetContent>
         </Sheet>
@@ -195,14 +202,15 @@ const FloatingToolbar: React.FC = () => {
               <span className="text-xs">Notes</span>
             </div>
           </SheetTrigger>
-          <SheetContent side="right" className="w-96">
+          <SheetContent side="right" className="w-[90vw] sm:w-[480px] md:w-[560px] lg:w-[720px] xl:w-[820px]">
             <SheetHeader>
               <SheetTitle>My Notes</SheetTitle>
             </SheetHeader>
             <div className="mt-6 h-full">
-              <NotesModal>
-                <div className="w-full h-full">Notes Content</div>
-              </NotesModal>
+              {/* Inline notes panel */}
+              <div className="h-[calc(100vh-10rem)] overflow-hidden">
+                <NoteList />
+              </div>
             </div>
           </SheetContent>
         </Sheet>
@@ -228,14 +236,15 @@ const FloatingToolbar: React.FC = () => {
               <span className="text-xs">Messages</span>
             </div>
           </SheetTrigger>
-          <SheetContent side="right" className="w-96">
+          <SheetContent side="right" className="w-[90vw] sm:w-[480px] md:w-[560px] lg:w-[720px] xl:w-[820px]">
             <SheetHeader>
               <SheetTitle>Messages</SheetTitle>
             </SheetHeader>
             <div className="mt-6 h-full">
-              <MessagingModal>
-                <div className="w-full h-full">Messages Content</div>
-              </MessagingModal>
+              {/* Inline messaging panel */}
+              <div className="h-[calc(100vh-10rem)] overflow-hidden">
+                <ConversationList />
+              </div>
             </div>
           </SheetContent>
         </Sheet>

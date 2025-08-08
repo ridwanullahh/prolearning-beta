@@ -109,6 +109,12 @@ const App = () => {
               <Route path="/course/:courseId" element={<CourseDetailsPage />} />
               <Route path="/track/:trackId" element={<CourseTrackDetailsPage />} />
               <Route path="/checkout" element={<Checkout />} />
+              {/* Direct learner course viewer route to support /my-course/:id links */}
+              <Route path="/my-course/:id" element={
+                <ProtectedRoute allowedRoles={["learner"]}>
+                  <CoursePage />
+                </ProtectedRoute>
+              } />
               
               <Route path="/dashboard" element={
                 <ProtectedRoute allowedRoles={['learner']}>

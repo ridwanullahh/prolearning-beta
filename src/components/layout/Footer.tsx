@@ -6,48 +6,43 @@ const Footer: React.FC = () => {
   return (
     <footer className="bg-green-50/50 text-gray-800 dark:bg-gray-900 dark:text-gray-300">
       <div className="container mx-auto px-4 py-16 md:px-6">
-        <div className="grid grid-cols-1 gap-12 md:grid-cols-4">
-          <div className="md:col-span-1">
+        {/* Modern 2-column responsive layout */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          {/* Brand and summary */}
+          <div>
             <Link to="/" className="mb-6 flex items-center gap-2">
               <GraduationCap className="h-8 w-8 text-green-500" />
               <span className="text-2xl font-bold text-gray-900 dark:text-white">
                 ProLearning
               </span>
             </Link>
-            <p className="max-w-xs text-gray-600 dark:text-gray-400">
+            <p className="max-w-md text-gray-600 dark:text-gray-400">
               The future of personalized education, powered by AI.
             </p>
           </div>
-          <div>
-            <h4 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-              Platform
-            </h4>
-            <ul className="space-y-3">
-              <li><FooterLink href="/marketplace">Marketplace</FooterLink></li>
-              <li><FooterLink href="/features">Features</FooterLink></li>
-              <li><FooterLink href="/blog">Blog</FooterLink></li>
-              <li><FooterLink href="/contact">Contact</FooterLink></li>
-              <li><FooterLink href="/become-instructor">Become an Instructor</FooterLink></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-              Company
-            </h4>
-            <ul className="space-y-3">
-              <li><FooterLink href="/about">About Us</FooterLink></li>
-              <li><FooterLink href="/careers">Careers</FooterLink></li>
-              <li><FooterLink href="/press">Press</FooterLink></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-              Legal
-            </h4>
-            <ul className="space-y-3">
-              <li><FooterLink href="/terms">Terms of Service</FooterLink></li>
-              <li><FooterLink href="/privacy">Privacy Policy</FooterLink></li>
-            </ul>
+
+          {/* Links columns */}
+          <div className="grid grid-cols-2 gap-8">
+            <div>
+              <h4 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Platform</h4>
+              <ul className="space-y-3">
+                <li><FooterLink href="/marketplace">Marketplace</FooterLink></li>
+                <li><FooterLink href="/features">Features</FooterLink></li>
+                <li><FooterLink href="/blog">Blog</FooterLink></li>
+                <li><FooterLink href="/contact">Contact</FooterLink></li>
+                <li><FooterLink href="/become-instructor">Become an Instructor</FooterLink></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Company</h4>
+              <ul className="space-y-3">
+                <li><FooterLink href="/about">About Us</FooterLink></li>
+                <li><FooterLink href="/careers">Careers</FooterLink></li>
+                <li><FooterLink href="/press">Press</FooterLink></li>
+                <li><FooterLink href="/terms">Terms of Service</FooterLink></li>
+                <li><FooterLink href="/privacy">Privacy Policy</FooterLink></li>
+              </ul>
+            </div>
           </div>
         </div>
         <div className="mt-16 border-t border-gray-200 pt-8 dark:border-gray-800">

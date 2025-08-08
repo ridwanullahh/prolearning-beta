@@ -22,15 +22,25 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
       learner: '/dashboard',
       instructor: '/instruct',
       super_admin: '/super-admin'
-    };
-    
+    } as const;
+
     return <Navigate to={roleRoutes[user.role]} replace />;
   }
-  // Redirect to onboarding if not completed
-  if (user.role === 'instructor' && !user.onboardingCompleted) {
+
+  // Redirect to onboarding if not completed (but allow the onboarding route itself)
+  const pathname = location.pathname;
+  if (
+    user.role === 'instructor' &&
+    !user.onboardingCompleted &&
+    pathname !== '/instruct/onboarding'
+  ) {
     return <Navigate to="/instruct/onboarding" replace />;
   }
-  if (user.role === 'learner' && !user.onboardingCompleted) {
+  if (
+    user.role === 'learner' &&
+    !user.onboardingCompleted &&
+    pathname !== '/dashboard/onboarding'
+  ) {
     return <Navigate to="/dashboard/onboarding" replace />;
   }
 

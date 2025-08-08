@@ -157,6 +157,7 @@ const LearnerDashboard = () => {
             </div>
           </main>
         </div>
+        {/* Floating toolbar is already included here */}
         <FloatingToolbar />
       </div>
     </SidebarProvider>

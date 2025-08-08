@@ -54,7 +54,9 @@ interface Course {
 }
 
 const CourseViewer = () => {
-  const { id } = useParams();
+  // Support both routes: /my-course/:id and /dashboard/course/:courseId/view
+  const { id, courseId } = useParams();
+  const effectiveCourseId = id || courseId;
   const navigate = useNavigate();
   const [course, setCourse] = useState<Course | null>(null);
   const [lessons, setLessons] = useState<any[]>([]);
@@ -67,10 +69,10 @@ const CourseViewer = () => {
   const user = authService.getCurrentUser();
 
   useEffect(() => {
-    if (id) {
-      loadCourse(id);
+    if (effectiveCourseId) {
+      loadCourse(effectiveCourseId);
     }
-  }, [id]);
+  }, [effectiveCourseId]);
 
   const loadCourse = async (courseId: string) => {
     try {

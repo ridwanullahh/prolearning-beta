@@ -14,7 +14,7 @@ import {
   Trash2,
   MoreVertical
 } from 'lucide-react';
-import formatDistanceToNow from '@/lib/date-utils';
+import { formatDistanceToNow } from 'date-fns';
 import { useLocation } from 'react-router-dom';
 import { db } from '@/lib/github-sdk';
 import { authService } from '@/lib/auth';

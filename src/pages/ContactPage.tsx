@@ -96,9 +96,9 @@ const ContactPage: React.FC = () => {
       <SmartHeader />
       <main>
         {/* Hero Section */}
-        <section className="relative bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 dark:from-gray-950 dark:via-blue-950/20 dark:to-indigo-950/20 py-20 md:py-24 lg:py-32 overflow-hidden">
+        <section className="relative bg-gradient-to-br from-white via-green-50/30 to-emerald-50/30 dark:from-gray-950 dark:via-green-950/20 dark:to-emerald-950/20 py-20 md:py-24 lg:py-32 overflow-hidden">
           <div className="absolute inset-0 opacity-30">
-            <div className="w-full h-full bg-blue-500/5 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.1)_1px,transparent_1px)] bg-[length:20px_20px]" />
+            <div className="w-full h-full bg-green-500/5 bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.1)_1px,transparent_1px)] bg-[length:20px_20px]" />
           </div>
 
           <motion.div
@@ -107,14 +107,14 @@ const ContactPage: React.FC = () => {
             transition={{ duration: 0.8, ease: 'easeOut' }}
             className="container mx-auto px-4 text-center relative z-10"
           >
-            <Badge className="mb-6 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-6 py-3 text-lg">
+            <Badge className="mb-6 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-6 py-3 text-lg">
               <Sparkles className="w-5 h-5 mr-2" />
               We're Here to Help
             </Badge>
 
             <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white sm:text-5xl md:text-6xl lg:text-7xl mb-6">
               Get in Touch
-              <span className="block bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mt-4">
+              <span className="block bg-gradient-to-r from-green-600 via-emerald-600 to-green-700 bg-clip-text text-transparent mt-4">
                 We'd Love to Hear From You
               </span>
             </h1>
@@ -156,7 +156,7 @@ const ContactPage: React.FC = () => {
                 >
                   <Card className="h-full hover:shadow-lg transition-shadow duration-300">
                     <CardContent className="p-8 text-center">
-                      <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                      <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
                         <method.icon className="w-8 h-8 text-white" />
                       </div>
                       <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">

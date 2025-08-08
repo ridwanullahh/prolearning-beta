@@ -299,7 +299,7 @@ const NoteList: React.FC = () => {
           </div>
 
           {/* Notes Grid */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="responsive-grid">
             {filteredNotes.length === 0 ? (
               <div className="col-span-full">
                 <Card>

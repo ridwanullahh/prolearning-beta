@@ -33,7 +33,8 @@ import SmartHeader from '@/components/layout/SmartHeader';
 import Footer from '@/components/layout/Footer';
 
 const CourseDetailsPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  // Our route is /course/:courseId
+  const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { addItem } = useCart();
@@ -45,10 +46,10 @@ const CourseDetailsPage: React.FC = () => {
   const user = authService.getCurrentUser();
 
   useEffect(() => {
-    if (id) {
-      loadCourseData(id);
+    if (courseId) {
+      loadCourseData(courseId);
     }
-  }, [id, user]);
+  }, [courseId, user]);
 
   const loadCourseData = async (courseId: string) => {
     try {
@@ -170,7 +171,7 @@ const CourseDetailsPage: React.FC = () => {
       return;
     }
     if (isEnrolled) {
-        navigate(`/my-course/${id}`);
+        navigate(`/my-course/${courseId}`);
         return;
     }
     if (course.price === 0) {

@@ -7,7 +7,7 @@ const InstructorOnboardingPage: React.FC = () => {
   const { user } = useAuth();
 
   if (!user || user.role !== 'instructor' || user.onboardingCompleted) {
-    return <Navigate to="/dashboard" />;
+    return <Navigate to="/instruct" />;
   }
 
   return (

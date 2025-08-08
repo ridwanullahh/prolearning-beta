@@ -1,6 +1,7 @@
 
 import { useParams } from 'react-router-dom';
 import EnhancedLessonViewer from '@/components/course/EnhancedLessonViewer';
+import FloatingToolbar from '@/components/global/FloatingToolbar';
 
 const LessonPage = () => {
   const { id } = useParams();
@@ -20,8 +21,8 @@ const LessonPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="container mx-auto px-4 py-8">
-        <EnhancedLessonViewer 
-          lessonId={id} 
+        <EnhancedLessonViewer
+          lessonId={id}
           courseId={courseId}
           onNext={() => {
             // Handle navigation to next lesson
@@ -33,6 +34,7 @@ const LessonPage = () => {
           }}
         />
       </div>
+      <FloatingToolbar />
     </div>
   );
 };

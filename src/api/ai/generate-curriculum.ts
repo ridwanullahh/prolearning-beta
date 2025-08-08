@@ -1,4 +1,4 @@
-import { aiService } from '@/lib/ai-service-streaming';
+import { streamingAIService } from '@/lib/ai-service-streaming';
 import { aiGuidelinesService } from '@/lib/ai-guidelines-service';
 
 export async function POST(request: Request) {
@@ -51,7 +51,7 @@ Format the response in clear, well-structured markdown that can be easily edited
 
     if (stream) {
       // Return streaming response
-      const response = await aiService.generateCourseContent(fullPrompt, 'curriculum');
+      const response = await streamingAIService.generateCourseContent(fullPrompt, 'curriculum');
       
       // Create a readable stream
       const encoder = new TextEncoder();
@@ -84,7 +84,7 @@ Format the response in clear, well-structured markdown that can be easily edited
       });
     } else {
       // Return complete response
-      const response = await aiService.generateCourseContent(fullPrompt, 'curriculum');
+      const response = await streamingAIService.generateCourseContent(fullPrompt, 'curriculum');
       
       return new Response(response, {
         headers: { 'Content-Type': 'text/plain' }

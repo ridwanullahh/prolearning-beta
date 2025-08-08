@@ -442,15 +442,14 @@ const CourseCard = ({ course, getLevelName, getSubjectCategory, formatPrice }: {
 
   // Generate a gradient based on course title (brand-compliant colors)
   const getGradientFromTitle = (title: string) => {
+    // Brand-forward gradients (avoid purple/indigo)
     const gradients = [
       'from-green-500 to-emerald-600',
-      'from-blue-500 to-indigo-600',
-      'from-teal-500 to-cyan-600',
-      'from-purple-500 to-violet-600',
       'from-emerald-500 to-green-600',
-      'from-indigo-500 to-blue-600',
-      'from-cyan-500 to-teal-600',
-      'from-violet-500 to-purple-600',
+      'from-teal-500 to-emerald-600',
+      'from-green-600 to-teal-600',
+      'from-emerald-600 to-green-700',
+      'from-teal-600 to-green-600',
     ];
     const index = title.length % gradients.length;
     return gradients[index];

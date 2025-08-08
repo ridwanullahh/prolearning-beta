@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { authService, AuthUser } from '../lib/auth';
 
 export const useAuth = () => {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(authService.getCurrentUser());
 
-  useEffect(() => {
-    const currentUser = authService.getCurrentUser();
-    setUser(currentUser);
-  }, []);
+  const updateUser = (updatedUser: AuthUser) => {
+    authService.updateCurrentUser(updatedUser);
+    setUser(updatedUser);
+  };
 
-  return { user, setUser };
+  return { user, setUser: updateUser };
 };

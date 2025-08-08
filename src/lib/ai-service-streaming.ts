@@ -14,6 +14,11 @@ class StreamingCourseGenerator {
     this.currentProvider = config.ai.primaryProvider;
   }
 
+  // Public method for plain content generation used by API endpoints
+  public async generateCourseContent(prompt: string, type: string): Promise<string> {
+    return await this.executeAIRequest(prompt, type);
+  }
+
   async generateCourseWithStreaming(courseSpec: any, onProgress: (progress: any) => void) {
     try {
       // Step 1: Generate curriculum

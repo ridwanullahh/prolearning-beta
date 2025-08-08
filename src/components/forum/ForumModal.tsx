@@ -77,8 +77,8 @@ const ForumModal: React.FC<ForumModalProps> = ({ courseId, lessonId, children })
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="max-w-6xl h-[85vh] flex flex-col">
-        <DialogHeader className="border-b pb-4">
+      <DialogContent className="max-w-[98vw] w-[98vw] sm:max-w-[95vw] sm:w-[95vw] lg:max-w-[90vw] lg:w-[90vw] h-[95vh] sm:h-[92vh] modal-content-enhanced">
+        <DialogHeader className="modal-header">
           <div className="flex items-center justify-between">
             <div>
               <DialogTitle className="text-xl font-bold">{getForumTitle()}</DialogTitle>
@@ -105,7 +105,7 @@ const ForumModal: React.FC<ForumModalProps> = ({ courseId, lessonId, children })
           </div>
         </DialogHeader>
 
-        <div className="flex-grow overflow-hidden">
+        <div className="modal-body modal-scroll">
           <Tabs defaultValue="all" className="h-full flex flex-col">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="all">All Discussions</TabsTrigger>

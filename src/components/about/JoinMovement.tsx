@@ -12,7 +12,7 @@ const JoinMovement = () => (
                 Whether you are taking your first academic steps or are a lifelong learner seeking to expand your horizons, you have a place here.
             </p>
             <div className="mt-10">
-                <Button asChild size="lg" className="rounded-2xl">
+                <Button asChild size="lg" className="rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg">
                     <Link to="/auth/register">
                         Start Your Learning Journey
                         <ArrowRight className="ml-2 h-5 w-5" />
