@@ -14,6 +14,7 @@ import CourseGenerationProgress from './CourseGenerationProgress';
 import { CourseParser } from '@/lib/courseParser';
 import { db } from '@/lib/github-sdk';
 import { authService } from '@/lib/auth';
+import { backgroundGenerationService } from '@/lib/background-generation-service';
 import CurriculumSetupStep from './CurriculumSetupStep';
 import { Loader2, BookOpen, Brain, Target, Clock, Upload } from 'lucide-react';
 
@@ -31,6 +32,7 @@ const CourseGenerationWizard = ({ onCourseGenerated }: CourseGenerationWizardPro
   const [currentStep, setCurrentStep] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState<any>(null);
+  const [useBackgroundGeneration, setUseBackgroundGeneration] = useState(false);
   const [formData, setFormData] = useState<ExtendedCourseGenerationOptions>({
     courseTitle: '',
     academicLevel: '',
@@ -129,15 +131,34 @@ const CourseGenerationWizard = ({ onCourseGenerated }: CourseGenerationWizardPro
       }
 
       // Generate the course
-      // Generate the course using the streaming service
-      const generatedCourse = await streamingAIService.generateCourseWithStreaming(
-        formData,
-        (progressUpdate) => {
-          setProgress(progressUpdate);
-        }
-      );
+      if (useBackgroundGeneration && backgroundGenerationService.isBackgroundGenerationSupported()) {
+        // Queue for background generation
+        const requestId = await backgroundGenerationService.queueGeneration(formData, user.id);
 
-      // Get academic level and subject IDs
+        toast({
+          title: "Generation Queued!",
+          description: "Your course is being generated in the background. You'll receive a notification when it's ready.",
+        });
+
+        // Show background generation status
+        setProgress({
+          step: 'queued',
+          message: 'Course generation queued for background processing...',
+          progress: 100,
+          requestId: requestId
+        });
+
+        return;
+      } else {
+        // Generate the course using the streaming service
+        const generatedCourse = await streamingAIService.generateCourseWithStreaming(
+          formData,
+          (progressUpdate) => {
+            setProgress(progressUpdate);
+          }
+        );
+
+        // Get academic level and subject IDs
       const academicLevels = await db.get('academicLevels');
       const subjects = await db.get('subjects');
       
@@ -201,6 +222,7 @@ const CourseGenerationWizard = ({ onCourseGenerated }: CourseGenerationWizardPro
         if (onCourseGenerated) {
           onCourseGenerated(course);
         }
+      }
       }
     } catch (error: any) {
       console.error('Course generation error:', error);
@@ -577,13 +599,30 @@ const CourseGenerationWizard = ({ onCourseGenerated }: CourseGenerationWizardPro
                 Next
               </Button>
             ) : (
-              <Button
-                onClick={handleGenerateCourse}
-                disabled={isGenerating || !formData.academicLevel || !formData.subject}
-              >
-                {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Generate Course
-              </Button>
+              <div className="space-y-3">
+                {/* Background Generation Option */}
+                {backgroundGenerationService.isBackgroundGenerationSupported() && (
+                  <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg">
+                    <Checkbox
+                      id="background-generation"
+                      checked={useBackgroundGeneration}
+                      onCheckedChange={setUseBackgroundGeneration}
+                    />
+                    <Label htmlFor="background-generation" className="text-sm">
+                      Generate in background (you can navigate away and get notified when done)
+                    </Label>
+                  </div>
+                )}
+
+                <Button
+                  onClick={handleGenerateCourse}
+                  disabled={isGenerating || !formData.academicLevel || !formData.subject}
+                  className="w-full"
+                >
+                  {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {useBackgroundGeneration ? 'Queue Generation' : 'Generate Course'}
+                </Button>
+              </div>
             )}
           </div>
         )}

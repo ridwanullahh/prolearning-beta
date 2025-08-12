@@ -256,16 +256,22 @@ export const schema = {
     updatedAt: 'string',
   },
   forums: {
-    courseId: 'string', // Each course has one forum
+    courseId: 'string', // Each course has one main forum
+    moduleId: 'string', // Optional: for module-specific sub-forums
     title: 'string',
     description: 'string',
+    type: 'string', // 'course', 'module', 'general'
+    parentForumId: 'string', // Optional: for hierarchical structure
     isActive: 'boolean',
+    isAutoCreated: 'boolean', // True for auto-created forums
+    order: 'number', // For ordering sub-forums
     createdAt: 'string',
     updatedAt: 'string',
   },
   forumThreads: {
     forumId: 'string',
     courseId: 'string', // Direct reference for easier querying
+    moduleId: 'string', // Optional: for module-specific threads
     lessonId: 'string', // Optional: for lesson-specific threads
     userId: 'string', // User who created the thread
     title: 'string',
@@ -274,6 +280,7 @@ export const schema = {
     isPinned: 'boolean',
     isLocked: 'boolean',
     isAnswered: 'boolean', // For question threads
+    isAutoCreated: 'boolean', // True for auto-created lesson threads
     tags: 'array',
     viewCount: 'number',
     lastActivityAt: 'string',

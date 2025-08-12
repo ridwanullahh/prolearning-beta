@@ -48,8 +48,8 @@ import {
 const StatCard = ({ icon: Icon, title, value, change, color }) => {
     const colors = {
         green: 'from-green-500 to-emerald-500',
-        blue: 'from-blue-500 to-sky-500',
-        purple: 'from-purple-500 to-indigo-500',
+        emerald: 'from-emerald-500 to-green-500',
+        teal: 'from-teal-500 to-emerald-500',
         yellow: 'from-yellow-500 to-amber-500',
     }
     return (

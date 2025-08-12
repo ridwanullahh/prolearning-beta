@@ -222,7 +222,7 @@ export class CourseParser {
   }
 
   static async saveParsedCourseToDatabase(
-    parsedData: { course: any; lessons: ParsedLesson[] },
+    parsedData: { course: any; modules?: any[]; lessons: ParsedLesson[] },
     courseId: string,
     db: any
   ): Promise<void> {
@@ -242,11 +242,38 @@ export class CourseParser {
       const keyPointsToInsert: any[] = [];
       const mindMapsToInsert: any[] = [];
 
+      // Create modules if they exist in the parsed data
+      const moduleMap = new Map<string, string>(); // moduleTitle -> moduleId
+      if (parsedData.modules && parsedData.modules.length > 0) {
+        for (let i = 0; i < parsedData.modules.length; i++) {
+          const moduleData = parsedData.modules[i];
+          const module = await db.insert('modules', {
+            courseId,
+            title: moduleData.title,
+            description: moduleData.description || '',
+            order: i,
+            prerequisites: [],
+            dripSchedule: { enabled: false, delayDays: 0 },
+            isPublished: true,
+            estimatedDuration: moduleData.estimatedDuration || 0,
+            objectives: moduleData.objectives || []
+          });
+          moduleMap.set(moduleData.title, module.id);
+        }
+      }
+
       // Save lessons and related content
       for (const lessonData of parsedData.lessons) {
+        // Determine module ID if lesson belongs to a module
+        let moduleId = null;
+        if (lessonData.moduleTitle && moduleMap.has(lessonData.moduleTitle)) {
+          moduleId = moduleMap.get(lessonData.moduleTitle);
+        }
+
         // Create lesson
         const lesson = {
           courseId,
+          moduleId,
           title: lessonData.title,
           description: lessonData.description,
           order: lessonData.order,

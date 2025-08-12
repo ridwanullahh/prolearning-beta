@@ -156,7 +156,7 @@ const ThreadView: React.FC<ThreadViewProps> = ({ thread, onBack }) => {
   const getThreadTypeColor = (type: string) => {
     switch (type) {
       case 'question':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+        return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200';
       case 'general':
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
       default:

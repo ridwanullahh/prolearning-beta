@@ -92,18 +92,18 @@ const SuperAdminDashboard = () => {
 
 	return (
 		<SidebarProvider>
-			<div className="flex min-h-screen w-full flex-row bg-gradient-to-br from-blue-50/50 via-white to-indigo-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-blue-950/20">
+			<div className="flex min-h-screen w-full flex-row bg-gradient-to-br from-green-50/50 via-emerald-50/30 to-teal-50/20 dark:from-gray-950 dark:via-gray-900 dark:to-green-950/20">
 				<AppSidebar />
 				<div className="flex flex-col sm:gap-4">
 					<AppHeader />
 					<main className="grid flex-1 items-start gap-4 p-4 sm:px-6 md:gap-8">
 						<Tabs defaultValue="overview">
-							<TabsList>
-								<TabsTrigger value="overview">Overview</TabsTrigger>
-								<TabsTrigger value="wallet">Wallet</TabsTrigger>
-								<TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
-								<TabsTrigger value="blog">Blog</TabsTrigger>
-								<TabsTrigger value="support">Support</TabsTrigger>
+							<TabsList className="bg-white/80 backdrop-blur-sm">
+								<TabsTrigger value="overview" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">Overview</TabsTrigger>
+								<TabsTrigger value="wallet" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">Wallet</TabsTrigger>
+								<TabsTrigger value="withdrawals" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">Withdrawals</TabsTrigger>
+								<TabsTrigger value="blog" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">Blog</TabsTrigger>
+								<TabsTrigger value="support" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">Support</TabsTrigger>
 							</TabsList>
 							<TabsContent value="overview">
 								<Outlet />
@@ -229,7 +229,7 @@ const WithdrawalManagement = () => {
 	if (loading) {
 		return (
 			<div className="flex items-center justify-center py-8">
-				<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+				<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
 			</div>
 		);
 	}

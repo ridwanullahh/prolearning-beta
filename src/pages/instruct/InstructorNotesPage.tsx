@@ -58,51 +58,59 @@ const InstructorNotesPage: React.FC = () => {
   }, [currentUser]);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold mb-2">My Notes</h1>
-        <p className="text-muted-foreground">
-          Organize your thoughts, ideas, and teaching materials with our advanced note-taking system.
-        </p>
+    <div className="space-y-8">
+      {/* Header Section */}
+      <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 rounded-3xl p-8 text-white">
+        <div>
+          <h1 className="text-4xl font-bold mb-2">My Notes</h1>
+          <p className="text-green-100 text-lg">
+            Organize your thoughts, ideas, and teaching materials with our advanced note-taking system.
+          </p>
+        </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Notes</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-700">Total Notes</CardTitle>
+            <div className="p-2 bg-green-100 rounded-lg">
+              <FileText className="h-4 w-4 text-green-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalNotes}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-gray-900">{stats.totalNotes}</div>
+            <p className="text-xs text-gray-500">
               Across all folders and categories
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Favorite Notes</CardTitle>
-            <Star className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-700">Favorite Notes</CardTitle>
+            <div className="p-2 bg-yellow-100 rounded-lg">
+              <Star className="h-4 w-4 text-yellow-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.favoriteNotes}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-gray-900">{stats.favoriteNotes}</div>
+            <p className="text-xs text-gray-500">
               Your starred notes
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">AI Enhanced</CardTitle>
-            <Sparkles className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-700">AI Enhanced</CardTitle>
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <Sparkles className="h-4 w-4 text-purple-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.aiEnhancedNotes}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-gray-900">{stats.aiEnhancedNotes}</div>
+            <p className="text-xs text-gray-500">
               Notes improved by AI
             </p>
           </CardContent>

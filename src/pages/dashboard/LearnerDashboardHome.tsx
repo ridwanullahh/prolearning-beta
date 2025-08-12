@@ -250,9 +250,9 @@ const LearnerDashboardHome = () => {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid gap-6 lg:gap-8 lg:grid-cols-3">
+      <div className="grid gap-6 lg:gap-8 lg:grid-cols-3 overflow-x-hidden">
         {/* Continue Learning Section */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-6 min-w-0">
           {recentCourses.length > 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -281,17 +281,17 @@ const LearnerDashboardHome = () => {
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 px-4 sm:px-6">
                   {recentCourses.map((course, index) => (
                     <motion.div
                       key={course.id}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.5, delay: 0.1 * index }}
-                      className="group p-4 rounded-2xl border border-gray-100 dark:border-gray-800 hover:border-green-200 dark:hover:border-green-800 hover:bg-gradient-to-r hover:from-green-50/50 hover:to-emerald-50/50 dark:hover:from-green-950/20 dark:hover:to-emerald-950/20 transition-all duration-200 cursor-pointer"
+                      className="group p-3 sm:p-4 rounded-2xl border border-gray-100 dark:border-gray-800 hover:border-green-200 dark:hover:border-green-800 hover:bg-gradient-to-r hover:from-green-50/50 hover:to-emerald-50/50 dark:hover:from-green-950/20 dark:hover:to-emerald-950/20 transition-all duration-200 cursor-pointer overflow-hidden"
                       onClick={() => navigate(`/my-course/${course.id}`)}
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between min-w-0">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-2">
                             <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center">
@@ -307,18 +307,18 @@ const LearnerDashboardHome = () => {
                             </div>
                           </div>
                           
-                          <div className="flex items-center gap-4 mb-3">
+                          <div className="flex items-center gap-2 sm:gap-4 mb-3 flex-wrap">
                             <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                              <Clock className="h-3 w-3" />
-                              {course.duration}h
+                              <Clock className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">{course.duration}h</span>
                             </div>
                             <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                              <Star className="h-3 w-3" />
-                              {course.rating || 'New'}
+                              <Star className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">{course.rating || 'New'}</span>
                             </div>
                             <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                              <Users className="h-3 w-3" />
-                              {course.enrollmentCount || 0} enrolled
+                              <Users className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">{course.enrollmentCount || 0} enrolled</span>
                             </div>
                           </div>
 
@@ -333,10 +333,10 @@ const LearnerDashboardHome = () => {
                           </div>
                         </div>
 
-                        <div className="ml-4 flex items-center">
+                        <div className="ml-2 sm:ml-4 flex items-center flex-shrink-0">
                           <Button
                             size="sm"
-                            className="rounded-full bg-green-600 hover:bg-green-700 text-white shadow-md shadow-green-600/25"
+                            className="rounded-full bg-green-600 hover:bg-green-700 text-white shadow-md shadow-green-600/25 p-2"
                           >
                             <Play className="h-4 w-4" />
                           </Button>
@@ -382,7 +382,7 @@ const LearnerDashboardHome = () => {
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
+        <div className="space-y-6 min-w-0">
           {/* Quick Actions */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}

@@ -82,36 +82,30 @@ const CurriculumSetupStep: React.FC<CurriculumSetupStepProps> = ({
 
     try {
       const prompt = buildCurriculumPrompt();
-      
-      // Simulate streaming response
-      const response = await fetch('/api/ai/generate-curriculum', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, stream: true })
-      });
 
-      if (!response.ok) {
-        throw new Error('Failed to generate curriculum');
+      // Use direct AI service streaming instead of API route
+      const { streamingAIService } = await import('@/lib/ai-service-streaming');
+
+      // Generate curriculum content directly
+      const curriculumContent = await streamingAIService.generateCourseContent(prompt, 'curriculum');
+
+      // Simulate streaming for better UX
+      const words = curriculumContent.split(' ');
+      let currentContent = '';
+
+      for (let i = 0; i < words.length; i++) {
+        currentContent += words[i] + ' ';
+        setStreamingContent(currentContent);
+
+        // Add small delay to simulate streaming
+        if (i % 5 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
       }
 
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('Streaming not supported');
-      }
+      setGeneratedCurriculum(curriculumContent);
+      setCurriculum(curriculumContent);
 
-      let fullContent = '';
-      const decoder = new TextDecoder();
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        fullContent += chunk;
-        setStreamingContent(fullContent);
-      }
-
-      setGeneratedCurriculum(fullContent);
       toast({
         title: 'Curriculum Generated',
         description: 'Your curriculum has been generated successfully!'

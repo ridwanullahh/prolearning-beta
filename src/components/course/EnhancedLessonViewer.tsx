@@ -595,31 +595,31 @@ const EnhancedLessonViewer = ({
       </Card>
 
       {/* Lesson Content */}
-      <Tabs defaultValue="content" className="w-full sticky top-0 bg-white z-10">
-        <TabsList className="grid w-full grid-cols-5 border-b">
-          <TabsTrigger value="content" className="flex items-center gap-2">
+      <Tabs defaultValue="content" className="w-full">
+        <TabsList className="grid w-full grid-cols-5 mb-6 bg-gray-50 p-1 rounded-lg">
+          <TabsTrigger value="content" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <BookOpen className="h-4 w-4" />
-            Content
+            <span className="hidden sm:inline">Content</span>
           </TabsTrigger>
-          <TabsTrigger value="quiz" className="flex items-center gap-2">
+          <TabsTrigger value="quiz" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <HelpCircle className="h-4 w-4" />
-            Quiz
+            <span className="hidden sm:inline">Quiz</span>
           </TabsTrigger>
-          <TabsTrigger value="flashcards" className="flex items-center gap-2">
+          <TabsTrigger value="flashcards" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <Brain className="h-4 w-4" />
-            Flashcards
+            <span className="hidden sm:inline">Flashcards</span>
           </TabsTrigger>
-          <TabsTrigger value="keypoints" className="flex items-center gap-2">
+          <TabsTrigger value="keypoints" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <Lightbulb className="h-4 w-4" />
-            Key Points
+            <span className="hidden sm:inline">Key Points</span>
           </TabsTrigger>
-          <TabsTrigger value="mindmap" className="flex items-center gap-2">
+          <TabsTrigger value="mindmap" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <Brain className="h-4 w-4" />
-            Mind Map
+            <span className="hidden sm:inline">Mind Map</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="content" className="mt-4">
+        <TabsContent value="content" className="mt-0">
           <div className="space-y-6">
             {contents.length > 0 ? (
               contents.map((content, index) => (
@@ -661,19 +661,19 @@ const EnhancedLessonViewer = ({
           </div>
         </TabsContent>
 
-        <TabsContent value="quiz" className="mt-4">
+        <TabsContent value="quiz" className="mt-0">
           {renderQuizContent()}
         </TabsContent>
 
-        <TabsContent value="flashcards" className="mt-4">
+        <TabsContent value="flashcards" className="mt-0">
           {renderFlashcards()}
         </TabsContent>
 
-        <TabsContent value="keypoints" className="mt-4">
+        <TabsContent value="keypoints" className="mt-0">
           {renderKeyPoints()}
         </TabsContent>
 
-        <TabsContent value="mindmap" className="mt-4">
+        <TabsContent value="mindmap" className="mt-0">
           {renderMindMap()}
         </TabsContent>
       </Tabs>

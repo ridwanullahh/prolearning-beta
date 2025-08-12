@@ -19,6 +19,11 @@ export const config = {
   ai: {
     chutesToken: getEnv('VITE_CHUTES_API_TOKEN') || '',
     geminiKey: getEnv('VITE_GEMINI_AI_KEY') || 'AIzaSyBc0N-5GmNRED_voJJOm6hJsJIfL5XMPUM',
+    // Support for multiple Gemini API keys for aggregation
+    geminiKeys: (getEnv('VITE_GEMINI_AI_KEYS') || getEnv('VITE_GEMINI_AI_KEY') || 'AIzaSyBc0N-5GmNRED_voJJOm6hJsJIfL5XMPUM')
+      .split(',')
+      .map((key: string) => key.trim())
+      .filter((key: string) => key.length > 0),
     cloudflareAccountId: getEnv('VITE_CLOUDFLARE_ACCOUNT_ID') || '',
     cloudflareToken: getEnv('VITE_CLOUDFLARE_API_TOKEN') || '',
     openai: getEnv('VITE_OPENAI_API_KEY') || '',

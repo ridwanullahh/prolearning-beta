@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { X } from 'lucide-react';
 import { db } from '@/lib/github-sdk';
 import { authService } from '@/lib/auth';
+import { forumService } from '@/lib/forum-service';
 
 interface CreateThreadModalProps {
   courseId: string;
@@ -44,25 +45,42 @@ const CreateThreadModal: React.FC<CreateThreadModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      // Ensure forum exists for the course
-      let forum = await db.queryBuilder('forums')
-        .where((f: any) => f.courseId === courseId)
-        .exec();
-      
-      if (forum.length === 0) {
-        const course = await db.getItem('courses', courseId);
-        await db.insert('forums', {
-          courseId,
-          title: `${course?.title || 'Course'} Forum`,
-          description: `Discussion forum for ${course?.title || 'this course'}`,
-          isActive: true
-        });
+      // Check if user can create content in this course
+      const canCreate = await forumService.canUserCreateContent(courseId, currentUser.id);
+      if (!canCreate) {
+        throw new Error('You do not have permission to create threads in this course');
+      }
+
+      // Get the appropriate forum for the thread
+      let targetForum;
+      if (lessonId) {
+        // Find lesson's module forum
+        const lesson = await db.getItem('lessons', lessonId);
+        if (lesson?.moduleId) {
+          const moduleForums = await db.queryBuilder('forums')
+            .where((f: any) => f.moduleId === lesson.moduleId && f.type === 'module')
+            .exec();
+          targetForum = moduleForums[0];
+        }
+      }
+
+      if (!targetForum) {
+        // Use general forum as fallback
+        const generalForums = await db.queryBuilder('forums')
+          .where((f: any) => f.courseId === courseId && f.type === 'general')
+          .exec();
+        targetForum = generalForums[0];
+      }
+
+      if (!targetForum) {
+        throw new Error('No forum available for this course');
       }
 
       // Create the thread
       await db.insert('forumThreads', {
-        forumId: courseId, // Using courseId as forumId for simplicity
+        forumId: targetForum.id,
         courseId,
+        moduleId: targetForum.moduleId || null,
         lessonId: lessonId || null,
         userId: currentUser.id,
         title: title.trim(),
@@ -71,6 +89,7 @@ const CreateThreadModal: React.FC<CreateThreadModalProps> = ({
         isPinned: false,
         isLocked: false,
         isAnswered: false,
+        isAutoCreated: false,
         tags,
         viewCount: 0,
         lastActivityAt: new Date().toISOString(),

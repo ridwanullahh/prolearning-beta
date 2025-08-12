@@ -22,6 +22,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { authService } from '@/lib/auth';
 import { db } from '@/lib/github-sdk';
+import { forumService } from '@/lib/forum-service';
 import ModuleManager from '@/components/course/ModuleManager';
 import {
 	ArrowLeft,
@@ -124,14 +125,29 @@ const CourseBuilder = () => {
 
 		try {
 			setLoading(true);
-			const courseData = { ...course, creatorId: user.id, updatedAt: new Date().toISOString() };
+			const courseData = {
+				...course,
+				creatorId: user.id,
+				instructorId: user.id,
+				updatedAt: new Date().toISOString()
+			};
 
+			let courseId = id;
 			if (isEditing && id) {
 				await db.update('courses', id, courseData);
 			} else {
 				const newCourse = await db.insert('courses', courseData);
+				courseId = newCourse.id;
 				setIsEditing(true);
                 navigate(`/instruct/courses/${newCourse.id}/edit`, { replace: true });
+
+				// Create forum hierarchy for new instructor-led course
+				try {
+					await forumService.createCourseForumHierarchy(courseId);
+				} catch (forumError) {
+					console.error('Error creating forum hierarchy:', forumError);
+					// Don't fail course creation if forum creation fails
+				}
 			}
 
 			toast({ title: 'Success', description: 'Course saved successfully' });

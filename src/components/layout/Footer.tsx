@@ -4,10 +4,10 @@ import React from 'react';
 
 const Footer: React.FC = () => {
   return (
-    <footer className="bg-green-50/50 text-gray-800 dark:bg-gray-900 dark:text-gray-300">
-      <div className="container mx-auto px-4 py-16 md:px-6">
+    <footer className="bg-green-50/50 text-gray-800 dark:bg-gray-900 dark:text-gray-300 overflow-x-hidden">
+      <div className="container mx-auto px-4 py-16 md:px-6 max-w-7xl">
         {/* Modern 2-column responsive layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 min-w-0">
           {/* Brand and summary */}
           <div>
             <Link to="/" className="mb-6 flex items-center gap-2">
@@ -22,8 +22,8 @@ const Footer: React.FC = () => {
           </div>
 
           {/* Links columns */}
-          <div className="grid grid-cols-2 gap-8">
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 min-w-0">
+            <div className="min-w-0">
               <h4 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Platform</h4>
               <ul className="space-y-3">
                 <li><FooterLink href="/marketplace">Marketplace</FooterLink></li>
@@ -33,7 +33,7 @@ const Footer: React.FC = () => {
                 <li><FooterLink href="/become-instructor">Become an Instructor</FooterLink></li>
               </ul>
             </div>
-            <div>
+            <div className="min-w-0">
               <h4 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Company</h4>
               <ul className="space-y-3">
                 <li><FooterLink href="/about">About Us</FooterLink></li>
@@ -46,11 +46,11 @@ const Footer: React.FC = () => {
           </div>
         </div>
         <div className="mt-16 border-t border-gray-200 pt-8 dark:border-gray-800">
-          <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+          <div className="flex flex-col items-center justify-between gap-6 sm:flex-row min-w-0">
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center sm:text-left">
               &copy; {new Date().getFullYear()} ProLearning. All rights reserved.
             </p>
-            <div className="flex gap-6">
+            <div className="flex gap-6 flex-shrink-0">
               <SocialLink href="#"><Facebook className="h-6 w-6" /></SocialLink>
               <SocialLink href="#"><Twitter className="h-6 w-6" /></SocialLink>
               <SocialLink href="#"><Instagram className="h-6 w-6" /></SocialLink>

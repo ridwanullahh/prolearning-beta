@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/github-sdk';
+import { forumService } from '@/lib/forum-service';
 import { ArrowLeft, Save, Plus, Trash2, GripVertical, Upload, FileText, Video, Image as ImageIcon, Music, Type } from 'lucide-react';
 import RichTextEditor from '@/components/shared/RichTextEditor';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
@@ -92,6 +93,15 @@ const LessonEditor: React.FC = () => {
 
       if (lessonId === 'new' || !lesson) {
         const newLesson = await db.insert('lessons', { ...lessonData, createdAt: new Date().toISOString() });
+
+        // Create forum thread for the new lesson
+        try {
+          await forumService.createLessonThread(newLesson.id);
+        } catch (forumError) {
+          console.error('Error creating lesson forum thread:', forumError);
+          // Don't fail lesson creation if forum creation fails
+        }
+
         navigate(`/instruct/courses/${courseId}/lessons/${newLesson.id}/edit`);
       } else {
         await db.update('lessons', lessonId!, lessonData);

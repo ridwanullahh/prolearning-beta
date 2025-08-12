@@ -247,22 +247,22 @@ const MarketplacePage = () => {
         transition={{ type: 'spring', stiffness: 50, damping: 15 }}
         className="bg-white dark:bg-gray-900/80 backdrop-blur-lg shadow-sm border-b dark:border-gray-800"
       >
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="text-center md:text-left">
-              <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+        <div className="container mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="flex flex-col gap-4 sm:gap-6">
+            <div className="text-center">
+              <h1 className="text-2xl sm:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">
                 <span className="bg-gradient-to-r from-green-500 to-emerald-500 bg-clip-text text-transparent">
                   Course Marketplace
                 </span>
               </h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-2 text-lg">
-                Explore thousands of courses to fuel your curiosity.
+              <p className="text-gray-600 dark:text-gray-400 mt-2 text-sm sm:text-lg">
+                Discover your next learning adventure
               </p>
             </div>
-            <div className="relative w-full md:w-auto md:max-w-md">
+            <div className="relative w-full max-w-md mx-auto">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
-                placeholder="Search anything..."
+                placeholder="Search courses..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-12 h-12 w-full bg-white/90 dark:bg-gray-800/90 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-green-500 focus:border-green-500 rounded-2xl shadow-lg backdrop-blur-sm"
@@ -272,9 +272,9 @@ const MarketplacePage = () => {
         </div>
       </motion.div>
 
-      <div className="py-8">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col lg:flex-row gap-8">
+      <div className="py-4 sm:py-8">
+        <div className="container mx-auto px-3 sm:px-6 lg:px-8 max-w-7xl">
+          <div className="flex flex-col lg:flex-row gap-4 sm:gap-8">
           {/* Filters Sidebar */}
           <AnimatePresence>
             {showFilters && (
@@ -288,9 +288,9 @@ const MarketplacePage = () => {
               />
             )}
             <motion.aside
-              className={`fixed lg:sticky top-0 lg:top-24 h-full lg:h-auto w-80 bg-white dark:bg-gray-900 shadow-xl lg:shadow-none p-6 z-40 transform ${
+              className={`fixed lg:sticky top-0 lg:top-24 h-full lg:h-auto w-80 max-w-[90vw] bg-white dark:bg-gray-900 shadow-xl lg:shadow-none p-4 sm:p-6 z-40 transform ${
                 showFilters ? 'translate-x-0' : '-translate-x-full'
-              } lg:translate-x-0 transition-transform duration-300 ease-in-out`}
+              } lg:translate-x-0 transition-transform duration-300 ease-in-out overflow-y-auto`}
             >
               <div className="flex items-center justify-between mb-6 lg:mb-4">
                 <h2 className="text-xl font-bold flex items-center gap-2">
@@ -375,30 +375,113 @@ const MarketplacePage = () => {
               </div>
             </div>
 
-            <motion.div
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              className={
-                viewMode === 'grid'
-                  ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6'
-                  : 'space-y-4'
-              }
-            >
-              {viewType === 'courses' && filteredCourses.map(course => (
-                <motion.div variants={itemVariants} key={course.id}>
-                  {viewMode === 'grid'
-                    ? <CourseCard course={course} getLevelName={getLevelName} getSubjectCategory={getSubjectCategory} formatPrice={formatPrice} />
-                    : <CourseListItem course={course} getLevelName={getLevelName} getSubjectCategory={getSubjectCategory} formatPrice={formatPrice} />
-                  }
-                </motion.div>
-              ))}
-              {viewType === 'tracks' && filteredCourseTracks.map(track => (
-                 <motion.div variants={itemVariants} key={track.id}>
-                   <CourseTrackCard track={track} />
-                 </motion.div>
-               ))}
-            </motion.div>
+            {/* Featured Courses Section */}
+            {viewType === 'courses' && filteredCourses.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-12"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Featured Courses</h2>
+                  <Button variant="outline" size="sm">
+                    View All Featured
+                    <ChevronRight className="ml-1 h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="relative">
+                  <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                    {filteredCourses.slice(0, 6).map(course => (
+                      <motion.div
+                        key={course.id}
+                        variants={itemVariants}
+                        className="flex-shrink-0 w-80"
+                      >
+                        <FeaturedCourseCard course={course} getLevelName={getLevelName} getSubjectCategory={getSubjectCategory} formatPrice={formatPrice} />
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Category Sections */}
+            {viewType === 'courses' && categories.length > 0 && (
+              <div className="space-y-12">
+                {categories.slice(0, 3).map(category => {
+                  const categoryCourses = filteredCourses.filter(course =>
+                    getSubjectCategory(course.subjectId) === category
+                  ).slice(0, 6);
+
+                  if (categoryCourses.length === 0) return null;
+
+                  return (
+                    <motion.div
+                      key={category}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="space-y-6"
+                    >
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white capitalize">
+                          {category} Courses
+                        </h2>
+                        <Button variant="outline" size="sm">
+                          View All {category}
+                          <ChevronRight className="ml-1 h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+                        {categoryCourses.map(course => (
+                          <motion.div variants={itemVariants} key={course.id}>
+                            <CourseCard course={course} getLevelName={getLevelName} getSubjectCategory={getSubjectCategory} formatPrice={formatPrice} />
+                          </motion.div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* All Courses Grid */}
+            {viewType === 'courses' && categories.length === 0 && (
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className={
+                  viewMode === 'grid'
+                    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6 overflow-x-hidden'
+                    : 'space-y-4'
+                }
+              >
+                {filteredCourses.map(course => (
+                  <motion.div variants={itemVariants} key={course.id}>
+                    {viewMode === 'grid'
+                      ? <CourseCard course={course} getLevelName={getLevelName} getSubjectCategory={getSubjectCategory} formatPrice={formatPrice} />
+                      : <CourseListItem course={course} getLevelName={getLevelName} getSubjectCategory={getSubjectCategory} formatPrice={formatPrice} />
+                    }
+                  </motion.div>
+                ))}
+              </motion.div>
+            )}
+
+            {/* Course Tracks */}
+            {viewType === 'tracks' && (
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6"
+              >
+                {filteredCourseTracks.map(track => (
+                   <motion.div variants={itemVariants} key={track.id}>
+                     <CourseTrackCard track={track} />
+                   </motion.div>
+                 ))}
+              </motion.div>
+            )}
 
             {filteredCourses.length === 0 && (
               <div className="text-center py-20">
@@ -435,6 +518,94 @@ const FilterSelect = ({ icon: Icon, label, value, onValueChange, options }: { ic
     </Select>
   </div>
 );
+
+const FeaturedCourseCard = ({ course, getLevelName, getSubjectCategory, formatPrice }: { course: Course, getLevelName: (levelId: string) => string, getSubjectCategory: (subjectId: string) => string, formatPrice: (price: number) => string }) => {
+  const navigate = useNavigate();
+  const [isLiked, setIsLiked] = useState(false);
+
+  // Generate a gradient based on course title (brand-compliant colors)
+  const getGradientFromTitle = (title: string) => {
+    const gradients = [
+      'from-green-500 to-emerald-600',
+      'from-emerald-500 to-green-600',
+      'from-teal-500 to-emerald-600',
+      'from-green-600 to-teal-600',
+      'from-emerald-600 to-green-700',
+      'from-teal-600 to-green-600',
+      'from-green-400 to-emerald-500',
+      'from-emerald-400 to-teal-500',
+    ];
+    const index = title.length % gradients.length;
+    return gradients[index];
+  };
+
+  return (
+    <Card
+      className="group overflow-hidden rounded-2xl h-full flex flex-col transition-all duration-300 ease-in-out hover:shadow-xl hover:-translate-y-2 border-0 bg-white dark:bg-gray-800/50 cursor-pointer shadow-lg"
+      onClick={() => navigate(`/course/${course.id}`)}
+    >
+      <div className="aspect-[16/10] relative overflow-hidden">
+        <div className={`w-full h-full bg-gradient-to-br ${getGradientFromTitle(course.title)} transition-all duration-500 group-hover:scale-105`}>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+          <div className="absolute top-3 left-3">
+            <Badge className="bg-yellow-500 text-yellow-900 font-semibold">Featured</Badge>
+          </div>
+          <div className="absolute top-3 right-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 bg-white/20 hover:bg-white/30 text-white"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsLiked(!isLiked);
+              }}
+            >
+              <Heart className={`h-4 w-4 ${isLiked ? 'fill-current text-red-500' : ''}`} />
+            </Button>
+          </div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <motion.div
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              transition={{ duration: 0.3 }}
+            >
+              <BookOpen className="h-12 w-12 text-white/80" />
+            </motion.div>
+          </div>
+        </div>
+      </div>
+
+      <CardContent className="p-4 flex flex-col flex-grow">
+        <div className="flex items-center justify-between mb-2">
+          <Badge variant="outline" className="capitalize text-xs">{getSubjectCategory(course.subjectId)}</Badge>
+          <Badge variant="outline" className="text-xs">{getLevelName(course.academicLevelId)}</Badge>
+        </div>
+
+        <h3 className="font-bold text-lg text-gray-900 dark:text-white mb-2 group-hover:text-green-600 transition-colors line-clamp-2">{course.title}</h3>
+
+        <p className="text-gray-600 dark:text-gray-300 text-sm mb-3 line-clamp-2 leading-relaxed flex-grow">{course.description}</p>
+
+        <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-3">
+          <div className="flex items-center gap-1"><Users className="h-4 w-4 flex-shrink-0"/><span className="truncate">{course.enrollmentCount || 0}</span></div>
+          <div className="flex items-center gap-1"><Clock className="h-4 w-4 flex-shrink-0"/><span className="truncate">{course.duration}h</span></div>
+          <div className="flex items-center gap-1"><Star className="h-4 w-4 text-yellow-400 flex-shrink-0"/><span className="truncate">{course.rating || 'New'}</span></div>
+        </div>
+
+        <div className="flex items-center justify-between mt-auto">
+          <span className="text-xl font-bold text-green-600 dark:text-green-400">
+            {formatPrice(course.price || 0)}
+          </span>
+          <Button
+            size="sm"
+            className="rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 flex-shrink-0"
+          >
+            <span className="mr-1">Enroll</span>
+            <ChevronRight className="h-3 w-3" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 const CourseCard = ({ course, getLevelName, getSubjectCategory, formatPrice }: { course: Course, getLevelName: (levelId: string) => string, getSubjectCategory: (subjectId: string) => string, formatPrice: (price: number) => string }) => {
   const navigate = useNavigate();
@@ -505,10 +676,10 @@ const CourseCard = ({ course, getLevelName, getSubjectCategory, formatPrice }: {
         
         <Separator className="my-3" />
 
-        <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-          <div className="flex items-center gap-1"><Users className="h-4 w-4"/>{course.enrollmentCount || 0}</div>
-          <div className="flex items-center gap-1"><Clock className="h-4 w-4"/>{course.duration}h</div>
-          <div className="flex items-center gap-1"><Star className="h-4 w-4 text-yellow-400"/>{course.rating || 'New'}</div>
+        <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 flex-wrap gap-2">
+          <div className="flex items-center gap-1"><Users className="h-4 w-4 flex-shrink-0"/><span className="truncate">{course.enrollmentCount || 0}</span></div>
+          <div className="flex items-center gap-1"><Clock className="h-4 w-4 flex-shrink-0"/><span className="truncate">{course.duration}h</span></div>
+          <div className="flex items-center gap-1"><Star className="h-4 w-4 text-yellow-400 flex-shrink-0"/><span className="truncate">{course.rating || 'New'}</span></div>
         </div>
 
         <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
@@ -523,9 +694,10 @@ const CourseCard = ({ course, getLevelName, getSubjectCategory, formatPrice }: {
 
           <Button
             size="sm"
-            className="rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+            className="rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 flex-shrink-0"
           >
-            <span className="mr-2">View Course</span>
+            <span className="mr-2 hidden sm:inline">View Course</span>
+            <span className="mr-2 sm:hidden">View</span>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -541,13 +713,13 @@ const CourseListItem = ({ course, getLevelName, getSubjectCategory, formatPrice 
   const getGradientFromTitle = (title: string) => {
     const gradients = [
       'from-green-500 to-emerald-600',
-      'from-blue-500 to-indigo-600',
-      'from-teal-500 to-cyan-600',
-      'from-purple-500 to-violet-600',
       'from-emerald-500 to-green-600',
-      'from-indigo-500 to-blue-600',
-      'from-cyan-500 to-teal-600',
-      'from-violet-500 to-purple-600',
+      'from-teal-500 to-emerald-600',
+      'from-green-600 to-teal-600',
+      'from-emerald-600 to-green-700',
+      'from-teal-600 to-green-600',
+      'from-green-400 to-emerald-500',
+      'from-emerald-400 to-teal-500',
     ];
     const index = title.length % gradients.length;
     return gradients[index];

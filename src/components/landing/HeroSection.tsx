@@ -26,10 +26,10 @@ const HeroSection = () => {
   ];
 
   const features = [
-    "AI-Powered Course Generation",
-    "Personalized Learning Paths",
+    "AI Course Generation",
+    "Expert-Led Courses",
     "Interactive Learning Tools",
-    "Expert-Verified Content"
+    "Personalized Pathways"
   ];
 
   return (
@@ -58,7 +58,7 @@ const HeroSection = () => {
             >
               <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-4 py-2 text-sm font-medium">
                 <Sparkles className="w-4 h-4 mr-2" />
-                AI-Powered Learning Platform
+                Complete Learning Ecosystem
               </Badge>
             </motion.div>
 
@@ -69,12 +69,12 @@ const HeroSection = () => {
               transition={{ duration: 0.8, delay: 0.3 }}
               className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white sm:text-5xl md:text-6xl lg:text-7xl"
             >
-              <span className="block mb-2">Transform Your</span>
+              <span className="block mb-2">Where Learning</span>
               <span className="block bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                Learning Journey
+                Meets Innovation
               </span>
               <span className="block text-3xl sm:text-4xl md:text-5xl lg:text-6xl mt-2 text-gray-700 dark:text-gray-300">
-                with AI
+                AI + Expert Instruction
               </span>
             </motion.h1>
 
@@ -85,8 +85,9 @@ const HeroSection = () => {
               transition={{ duration: 0.8, delay: 0.4 }}
               className="mx-auto max-w-2xl text-xl text-gray-600 dark:text-gray-300 lg:mx-0 leading-relaxed"
             >
-              Experience the future of education with our AI-powered platform. Create personalized courses,
-              access interactive learning tools, and join a community of learners achieving their goals.
+              Choose your learning path: Explore thousands of expert-crafted courses from professional instructors,
+              or instantly generate custom courses on any topic with our advanced AI. From structured learning
+              programs to on-demand knowledge creation - your education, your way.
             </motion.p>
 
             {/* Feature List */}

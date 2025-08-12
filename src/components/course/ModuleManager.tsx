@@ -22,6 +22,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautif
 import { db } from '@/lib/github-sdk';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import { forumService } from '@/lib/forum-service';
 
 interface Module {
   id: string;
@@ -118,7 +119,15 @@ const ModuleManager: React.FC<ModuleManagerProps> = ({
         estimatedDuration: 0,
         objectives: []
       });
-      
+
+      // Create forum hierarchy for the new module
+      try {
+        await forumService.createModuleForumHierarchy(newModule.id);
+      } catch (forumError) {
+        console.error('Error creating module forum hierarchy:', forumError);
+        // Don't fail module creation if forum creation fails
+      }
+
       setModules([...modules, newModule]);
       setIsCreatingModule(false);
       toast({

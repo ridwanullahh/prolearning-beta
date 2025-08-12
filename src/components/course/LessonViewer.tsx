@@ -35,6 +35,7 @@ const LessonViewer = ({
   hasNext,
   hasPrevious
 }: LessonViewerProps) => {
+  const [contents, setContents] = useState<any[]>([]);
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [flashcards, setFlashcards] = useState<any[]>([]);
   const [keyPoints, setKeyPoints] = useState<any[]>([]);
@@ -54,13 +55,18 @@ const LessonViewer = ({
 
   const loadLessonContent = async () => {
     try {
-      const [quizzesData, flashcardsData, keyPointsData, mindMapsData] = await Promise.all([
+      const [contentsData, quizzesData, flashcardsData, keyPointsData, mindMapsData] = await Promise.all([
+        db.queryBuilder('lessonContents')
+          .where((c: any) => c.lessonId === lesson.id)
+          .orderBy('order', 'asc')
+          .exec(),
         db.queryBuilder('quizzes').where((q: any) => q.lessonId === lesson.id).exec(),
         db.queryBuilder('flashcards').where((f: any) => f.lessonId === lesson.id).exec(),
         db.queryBuilder('keyPoints').where((k: any) => k.lessonId === lesson.id).exec(),
         db.queryBuilder('mindMaps').where((m: any) => m.lessonId === lesson.id).exec()
       ]);
 
+      setContents(contentsData);
       setQuizzes(quizzesData);
       setFlashcards(flashcardsData);
       setKeyPoints(keyPointsData);
@@ -280,52 +286,165 @@ const LessonViewer = ({
     );
   };
 
-  return (
-    <div className="space-y-6">
-      {/* Lesson Header */}
+  const renderMindMap = () => {
+    if (mindMaps.length === 0) {
+      return (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <Brain className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No mind map available</h3>
+            <p className="text-gray-600">This lesson doesn't have a mind map yet.</p>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    const mindMap = mindMaps[0];
+
+    return (
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
-              {lesson.title}
-            </CardTitle>
-            <Badge variant={lessonCompleted ? "default" : "secondary"}>
-              {lessonCompleted ? "Completed" : lesson.type}
-            </Badge>
-          </div>
-          <p className="text-gray-600">{lesson.description}</p>
+          <CardTitle>{mindMap.title}</CardTitle>
         </CardHeader>
+        <CardContent>
+          <div className="bg-gray-50 rounded-lg p-6 min-h-[400px]">
+            {mindMap.data && mindMap.data.nodes ? (
+              <div className="space-y-4">
+                <h4 className="font-semibold text-center mb-6">Concept Map</h4>
+                <div className="flex flex-col items-center space-y-4">
+                  {mindMap.data.nodes.map((node: any, index: number) => (
+                    <div key={node.id || index} className="text-center">
+                      <div className="bg-green-100 border-2 border-green-300 rounded-lg p-3 max-w-xs">
+                        <p className="font-medium text-green-800">{node.label || node.text}</p>
+                        {node.description && (
+                          <p className="text-sm text-green-600 mt-1">{node.description}</p>
+                        )}
+                      </div>
+                      {node.children && node.children.length > 0 && (
+                        <div className="mt-4 ml-8 space-y-2">
+                          {node.children.map((child: any, childIndex: number) => (
+                            <div key={child.id || childIndex} className="bg-blue-100 border-2 border-blue-300 rounded-lg p-2 max-w-xs">
+                              <p className="text-sm font-medium text-blue-800">{child.label || child.text}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Brain className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">Mind map data is not properly formatted.</p>
+              </div>
+            )}
+          </div>
+        </CardContent>
       </Card>
+    );
+  };
 
-      {/* Lesson Content */}
-      <Tabs defaultValue="content" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="content" className="flex items-center gap-2">
-            <BookOpen className="h-4 w-4" />
-            Content
-          </TabsTrigger>
-          <TabsTrigger value="quiz" className="flex items-center gap-2">
-            <HelpCircle className="h-4 w-4" />
-            Quiz
-          </TabsTrigger>
-          <TabsTrigger value="flashcards" className="flex items-center gap-2">
-            <Brain className="h-4 w-4" />
-            Flashcards
-          </TabsTrigger>
-          <TabsTrigger value="keypoints" className="flex items-center gap-2">
-            <Lightbulb className="h-4 w-4" />
-            Key Points
-          </TabsTrigger>
-        </TabsList>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 overflow-x-hidden">
+      <div className="container mx-auto px-4 py-6 max-w-6xl">
+        <div className="space-y-6">
+          {/* Back Button */}
+          <Button
+            variant="ghost"
+            onClick={() => window.history.back()}
+            className="mb-4"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Courses
+          </Button>
+
+          {/* Progress Bar */}
+          <div className="bg-white rounded-lg p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">Progress</span>
+              <span className="text-sm text-gray-600">0%</span>
+            </div>
+            <Progress value={0} className="w-full" />
+          </div>
+
+          {/* Lesson Header */}
+          <Card className="shadow-lg border-0">
+            <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-t-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <BookOpen className="h-5 w-5 flex-shrink-0" />
+                    <span className="truncate">{lesson.title}</span>
+                  </CardTitle>
+                  {lesson.description && (
+                    <p className="text-green-100 mt-2 line-clamp-2">{lesson.description}</p>
+                  )}
+                </div>
+                <Badge
+                  variant={lessonCompleted ? "default" : "secondary"}
+                  className="flex-shrink-0 bg-white text-green-600"
+                >
+                  {lessonCompleted ? "Completed" : "text"}
+                </Badge>
+              </div>
+            </CardHeader>
+          </Card>
+
+          {/* Lesson Content */}
+          <Tabs defaultValue="content" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 bg-white shadow-sm rounded-lg p-1">
+              <TabsTrigger value="content" className="flex items-center gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white">
+                <BookOpen className="h-4 w-4" />
+                <span className="hidden sm:inline">Content</span>
+              </TabsTrigger>
+              <TabsTrigger value="quiz" className="flex items-center gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white">
+                <HelpCircle className="h-4 w-4" />
+                <span className="hidden sm:inline">Quiz</span>
+              </TabsTrigger>
+              <TabsTrigger value="flashcards" className="flex items-center gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white">
+                <Brain className="h-4 w-4" />
+                <span className="hidden sm:inline">Flashcards</span>
+              </TabsTrigger>
+              <TabsTrigger value="keypoints" className="flex items-center gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white">
+                <Lightbulb className="h-4 w-4" />
+                <span className="hidden sm:inline">Key Points</span>
+              </TabsTrigger>
+              <TabsTrigger value="mindmap" className="flex items-center gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white">
+                <Brain className="h-4 w-4" />
+                <span className="hidden sm:inline">Mind Map</span>
+              </TabsTrigger>
+            </TabsList>
 
         <TabsContent value="content" className="mt-4">
           <Card>
             <CardContent className="p-6">
-              <div 
-                className="prose max-w-none"
-                dangerouslySetInnerHTML={{ __html: lesson.content }}
-              />
+              {contents.length > 0 ? (
+                <div className="space-y-6">
+                  {contents.map((content, index) => (
+                    <div key={content.id || index}>
+                      {content.title && (
+                        <h3 className="text-lg font-semibold mb-3">{content.title}</h3>
+                      )}
+                      <div
+                        className="prose max-w-none"
+                        dangerouslySetInnerHTML={{ __html: content.content }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : lesson.content ? (
+                <div
+                  className="prose max-w-none"
+                  dangerouslySetInnerHTML={{ __html: lesson.content }}
+                />
+              ) : (
+                <div className="text-center py-8">
+                  <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No content available</h3>
+                  <p className="text-gray-600">This lesson doesn't have any content yet.</p>
+                </div>
+              )}
               {!lessonCompleted && (
                 <div className="mt-6 pt-6 border-t">
                   <Button onClick={completeLesson} className="w-full">
@@ -349,26 +468,41 @@ const LessonViewer = ({
         <TabsContent value="keypoints" className="mt-4">
           {renderKeyPoints()}
         </TabsContent>
+
+        <TabsContent value="mindmap" className="mt-4">
+          {renderMindMap()}
+        </TabsContent>
       </Tabs>
 
-      {/* Navigation */}
-      <div className="flex justify-between">
-        <Button
-          variant="outline"
-          onClick={onPrevious}
-          disabled={!hasPrevious}
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Previous Lesson
-        </Button>
+          {/* Navigation */}
+          <div className="flex flex-col sm:flex-row gap-4 sm:justify-between mt-8">
+            <Button
+              variant="outline"
+              onClick={onPrevious}
+              disabled={!hasPrevious}
+              className="w-full sm:w-auto order-2 sm:order-1"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Previous Lesson
+            </Button>
 
-        <Button
-          onClick={onNext}
-          disabled={!hasNext || !lessonCompleted}
-        >
-          Next Lesson
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
+            <div className="flex items-center gap-2 text-sm text-gray-600 order-1 sm:order-2 justify-center">
+              <span>1</span>
+              <span>Previous</span>
+              <span>of</span>
+              <span>8</span>
+            </div>
+
+            <Button
+              onClick={onNext}
+              disabled={!hasNext || !lessonCompleted}
+              className="w-full sm:w-auto order-3 bg-green-600 hover:bg-green-700"
+            >
+              Next Lesson
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );

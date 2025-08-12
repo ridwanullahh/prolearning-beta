@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { db } from "./lib/github-sdk";
+import * as serviceWorkerRegistration from './lib/service-worker-registration';
 import Checkout from "./pages/Checkout";
 import { authService, AuthUser } from "./lib/auth";
 import AuthLayout from "./components/auth/AuthLayout";
@@ -16,7 +17,7 @@ import SuperAdminDashboard from "./pages/super-admin/SuperAdminDashboard";
 import LandingPage from "./pages/LandingPage";
 import CoursePage from "./pages/course/CoursePage";
 import LessonPage from "./pages/lesson/LessonPage";
-import MarketplacePage from "./pages/marketplace/MarketplacePage";
+import NewMarketplacePage from "./pages/marketplace/NewMarketplacePage";
 import CourseDetailsPage from "./pages/course/CourseDetailsPage";
 import CourseViewer from "./components/course/CourseViewer";
 import LessonEditor from "./pages/instruct/LessonEditor";
@@ -67,10 +68,25 @@ const App = () => {
         console.log('Initializing GitHub SDK...');
         await db.initialize();
         console.log('GitHub SDK initialized successfully');
-        
+
         const user = authService.getCurrentUser();
         setCurrentUser(user);
         setIsInitialized(true);
+
+        // Register service worker for background generation and push notifications
+        serviceWorkerRegistration.register({
+          onSuccess: (registration) => {
+            console.log('Service Worker registered successfully:', registration);
+          },
+          onUpdate: (registration) => {
+            console.log('Service Worker updated:', registration);
+            // Optionally show a notification to the user about the update
+          }
+        });
+
+        // Request notification permission
+        await serviceWorkerRegistration.requestNotificationPermission();
+
       } catch (error) {
         console.error('Failed to initialize app:', error);
         setIsInitialized(true);
@@ -105,7 +121,7 @@ const App = () => {
               <Route path="/help" element={<HelpCenter />} />
               <Route path="/help/:slug" element={<HelpArticle />} />
               <Route path="/support" element={<SupportTicket />} />
-              <Route path="/marketplace" element={<MarketplacePage />} />
+              <Route path="/marketplace" element={<NewMarketplacePage />} />
               <Route path="/course/:courseId" element={<CourseDetailsPage />} />
               <Route path="/track/:trackId" element={<CourseTrackDetailsPage />} />
               <Route path="/checkout" element={<Checkout />} />

@@ -179,36 +179,47 @@ const InstructorCourses = () => {
     };
 
 	return (
-        <div className="space-y-6 p-4 md:p-6">
-            <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-            >
-                <CardHeader>
-                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                        <div>
-                            <CardTitle className="text-3xl font-bold">My Courses</CardTitle>
-                            <CardDescription className="mt-1">
-                                An overview of all your creative work.
-                            </CardDescription>
+        <div className="space-y-8">
+            {/* Header Section */}
+            <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 rounded-3xl p-8 text-white">
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+                >
+                    <div>
+                        <p className="text-green-100 text-lg mb-4">An overview of all your creative work</p>
+                        <div className="flex items-center gap-6 text-green-100">
+                            <div className="flex items-center gap-2">
+                                <BookOpen className="h-5 w-5" />
+                                <span>{courses.length} Courses</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Users className="h-5 w-5" />
+                                <span>{courses.reduce((acc, course) => acc + (course.enrollmentCount || 0), 0)} Students</span>
+                            </div>
                         </div>
-                        <Button onClick={() => navigate('/instruct/courses/new')} className="rounded-full">
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Create New Course
-                        </Button>
                     </div>
-                </CardHeader>
-            </motion.div>
+                    <Button
+                        onClick={() => navigate('/instruct/courses/new')}
+                        className="bg-white text-green-600 hover:bg-green-50 font-semibold px-6 py-3 rounded-2xl shadow-lg"
+                    >
+                        <PlusCircle className="mr-2 h-5 w-5" />
+                        Create New Course
+                    </Button>
+                </motion.div>
+            </div>
 
-            <Card>
+            {/* Search and Filter Section */}
+            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
                 <CardContent className="pt-6">
                     <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                         <div className="w-full md:w-auto flex-grow">
                             <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input 
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Input
                                     placeholder="Search by title or description..."
-                                    className="pl-10 w-full"
+                                    className="pl-10 w-full border-gray-200 focus:border-green-500 focus:ring-green-500 rounded-xl"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                 />
@@ -216,14 +227,14 @@ const InstructorCourses = () => {
                         </div>
                         <div className="flex items-center gap-2">
                             <Tabs value={filter} onValueChange={setFilter}>
-                                <TabsList>
-                                    <TabsTrigger value="all">All</TabsTrigger>
-                                    <TabsTrigger value="published">Published</TabsTrigger>
-                                    <TabsTrigger value="draft">Draft</TabsTrigger>
+                                <TabsList className="bg-green-50">
+                                    <TabsTrigger value="all" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">All</TabsTrigger>
+                                    <TabsTrigger value="published" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">Published</TabsTrigger>
+                                    <TabsTrigger value="draft" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">Draft</TabsTrigger>
                                 </TabsList>
                             </Tabs>
-                            <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('grid')}><Grid/></Button>
-                            <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('list')}><List/></Button>
+                            <Button variant={viewMode === 'grid' ? 'default' : 'ghost'} size="icon" onClick={() => setViewMode('grid')} className="bg-green-600 hover:bg-green-700"><Grid/></Button>
+                            <Button variant={viewMode === 'list' ? 'default' : 'ghost'} size="icon" onClick={() => setViewMode('list')} className="bg-green-600 hover:bg-green-700"><List/></Button>
                         </div>
                     </div>
                 

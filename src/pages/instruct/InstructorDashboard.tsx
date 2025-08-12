@@ -109,7 +109,7 @@ const InstructorDashboard = () => {
 
 	return (
 		<SidebarProvider>
-			<div className="flex min-h-screen w-full flex-row bg-gradient-to-br from-blue-50/50 via-white to-indigo-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-blue-950/20">
+			<div className="flex min-h-screen w-full flex-row bg-gradient-to-br from-green-50/50 via-emerald-50/30 to-teal-50/20 dark:from-gray-950 dark:via-gray-900 dark:to-green-950/20">
 				<AppSidebar />
 				<div className="flex flex-col sm:gap-4">
 					<AppHeader />
