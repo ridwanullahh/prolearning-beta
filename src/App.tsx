@@ -17,7 +17,7 @@ import SuperAdminDashboard from "./pages/super-admin/SuperAdminDashboard";
 import LandingPage from "./pages/LandingPage";
 import CoursePage from "./pages/course/CoursePage";
 import LessonPage from "./pages/lesson/LessonPage";
-import NewMarketplacePage from "./pages/marketplace/NewMarketplacePage";
+import FixedMarketplacePage from "./pages/marketplace/FixedMarketplacePage";
 import CourseDetailsPage from "./pages/course/CourseDetailsPage";
 import CourseViewer from "./components/course/CourseViewer";
 import LessonEditor from "./pages/instruct/LessonEditor";
@@ -48,6 +48,12 @@ import InstructorSettingsPage from "./pages/instruct/SettingsPage";
 import QualificationApprovalsPage from "./pages/super-admin/QualificationApprovalsPage";
 import AIGuidelinesPage from "./pages/super-admin/AIGuidelinesPage";
 import CreateCourseTrackPage from "./pages/instruct/CreateCourseTrackPage";
+import NotificationManagementPage from "./pages/super-admin/NotificationManagementPage";
+import PopupBuilderPage from "./pages/super-admin/PopupBuilderPage";
+import BlogManagementPage from "./pages/super-admin/BlogManagementPage";
+import SupportManagementPage from "./pages/super-admin/SupportManagementPage";
+import NotificationSettingsPage from "./pages/settings/NotificationSettingsPage";
+import NotificationConsentModal from "./components/notifications/NotificationConsentModal";
 import ManageCourseTracksPage from "./pages/instruct/ManageCourseTracksPage";
 import EditCourseTrackPage from "./pages/instruct/EditCourseTrackPage";
 import CourseTrackDetailsPage from "./pages/course/CourseTrackDetailsPage";
@@ -61,6 +67,8 @@ const queryClient = new QueryClient();
 const App = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [showNotificationConsent, setShowNotificationConsent] = useState(false);
+  const [notificationConsentChecked, setNotificationConsentChecked] = useState(false);
 
   useEffect(() => {
     const initialize = async () => {
@@ -72,6 +80,20 @@ const App = () => {
         const user = authService.getCurrentUser();
         setCurrentUser(user);
         setIsInitialized(true);
+
+        // Check notification consent for logged-in users
+        if (user && !notificationConsentChecked) {
+          try {
+            const userData = await db.getItem('users', user.id);
+            if (!userData?.notificationConsent && !userData?.notificationConsentDate) {
+              // Show consent modal for users who haven't been asked
+              setTimeout(() => setShowNotificationConsent(true), 2000);
+            }
+            setNotificationConsentChecked(true);
+          } catch (error) {
+            console.error('Error checking notification consent:', error);
+          }
+        }
 
         // Register service worker for background generation and push notifications
         serviceWorkerRegistration.register({
@@ -121,7 +143,7 @@ const App = () => {
               <Route path="/help" element={<HelpCenter />} />
               <Route path="/help/:slug" element={<HelpArticle />} />
               <Route path="/support" element={<SupportTicket />} />
-              <Route path="/marketplace" element={<NewMarketplacePage />} />
+              <Route path="/marketplace" element={<FixedMarketplacePage />} />
               <Route path="/course/:courseId" element={<CourseDetailsPage />} />
               <Route path="/track/:trackId" element={<CourseTrackDetailsPage />} />
               <Route path="/checkout" element={<Checkout />} />
@@ -142,6 +164,7 @@ const App = () => {
                 <Route path="course/:courseId/view" element={<CourseViewer />} />
                 <Route path="onboarding" element={<LearnerOnboardingPage />} />
                 <Route path="settings" element={<LearnerSettingsPage />} />
+                <Route path="notification-settings" element={<NotificationSettingsPage />} />
                 <Route path="my-tracks" element={<MyCourseTracksPage />} />
                 <Route path="notes" element={<LearnerNotesPage />} />
               </Route>
@@ -173,11 +196,25 @@ const App = () => {
                 <Route path="instructor-approvals" element={<InstructorApprovalsPage />} />
                 <Route path="qualification-approvals" element={<QualificationApprovalsPage />} />
                 <Route path="ai-guidelines" element={<AIGuidelinesPage />} />
+                <Route path="notifications" element={<NotificationManagementPage />} />
+                <Route path="popups" element={<PopupBuilderPage />} />
+                <Route path="blog" element={<BlogManagementPage />} />
+                <Route path="support" element={<SupportManagementPage />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
+
+          {/* Notification Consent Modal */}
+          <NotificationConsentModal
+            isOpen={showNotificationConsent}
+            onClose={() => setShowNotificationConsent(false)}
+            onConsent={(granted) => {
+              console.log('Notification consent:', granted);
+              setShowNotificationConsent(false);
+            }}
+          />
         </TooltipProvider>
       </QueryClientProvider>
     </CartProvider>
